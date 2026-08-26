@@ -2,6 +2,7 @@
   "_README": "TEMPLATE CONFIG. Replace every value containing 'FILL:' before your first real run -- `./check-setup.sh` lists what is still unfilled, and jobscan.py refuses to run a scan while any remain. A worked, fully-filled and verified version of this file is in examples/config.json. Structure: each source has a `kind` (which platform to talk to). A source with `group: discovery` draws on max_discovery and faces the stricter discovery_* prescreen. See PLATFORMS.md for the platform reference; /jobscan-connector adds a company for you.",
   "companies": [
     {
+      "id": "muse-discovery",
       "kind": "themuse",
       "group": "discovery",
       "company": "(discovery)",
@@ -20,6 +21,7 @@
       "pages": 70
     },
     {
+      "id": "himalayas-remote",
       "kind": "himalayas",
       "group": "discovery",
       "company": "(remote)",
@@ -200,5 +202,6 @@
       "FILL: 'remote' if you would take one, then your state, its abbreviations, and your cities",
       "FILL: e.g. 'massachusetts', ', ma', 'boston', 'cambridge' -- see _README above"
     ]
-  }
+  },
+  "_local_README": "OPTIONAL OVERLAY: create config.local.json and jobscan merges it onto this file at load, leaving this one as the shipped template. That is what keeps `git pull` from ever conflicting with your tuning, and what stops a hand-edited copy from silently falling behind the universal block terms shipped here. Merge rules: a dict merges key-wise; \"key+\" merges into the list at `key` (an entry whose `id` matches a shipped one -- see the `id` fields on the two discovery sources -- merges onto it, the rest append, and FILL: placeholders here are dropped); a plain \"key\" replaces; null deletes. Use \"block+\" rather than \"block\": it keeps the 29 universal noise terms below and adds yours on top. Without config.local.json nothing changes -- edit this file directly and it still works."
 }

@@ -10,6 +10,10 @@
 
 __pycache__/
 
+# Your per-user config overlay -- merged onto config.json at load. Personal
+# (real employers, your regions), so it stays out of the public repo.
+/config.local.json
+
 # Any credentials file, should a future source ever need one.
 /.*.json
 !/.gitignore

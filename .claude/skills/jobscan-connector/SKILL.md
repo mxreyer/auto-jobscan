@@ -1,11 +1,11 @@
 ---
 name: jobscan-connector
-description: Add a company to jobscan's config.json — work out which ATS platform it uses, derive the identifiers, verify with a real request, and wire it in. Use when the user wants to track a specific employer, asks which job board a company uses, says a source is failing or returning zero, or wants to re-test a company previously recorded as unreachable.
+description: Add a company to jobscan's config.local.json — work out which ATS platform it uses, derive the identifiers, verify with a real request, and wire it in. Use when the user wants to track a specific employer, asks which job board a company uses, says a source is failing or returning zero, or wants to re-test a company previously recorded as unreachable.
 ---
 
 # Adding a jobscan connector
 
-A **connector** is one entry in the `companies` array of `config.json`. Adding
+A **connector** is one entry in the `companies+` array of `config.local.json`. Adding
 one means answering two questions: *which ATS does this company use*, and
 *what identifiers does that adapter need*.
 
@@ -94,8 +94,10 @@ specific to the *list* form of an endpoint whose detail form works, and
 
 ## Phase 4 — Wire it in and check
 
-Add the entry to `config.json` (copy the shape from `_companies_examples` in
-that file), then:
+Add the entry to `"companies+"` in `config.local.json`, creating the file if it
+is not there yet. **Not `config.json`** — that is the shipped template, and
+editing it puts real employers in the way of the next `git pull`. Copy the
+entry's shape from `_companies_examples` in `config.json`, then:
 
     python3 jobscan.py --check
 
@@ -159,7 +161,7 @@ writing the function.
 ## If the company is genuinely unreachable
 
 Record **what was tried** — the exact endpoints and how they failed — in the
-`_manual` block of `config.json`. Not "doesn't work":
+`_manual` block of `config.local.json`. Not "doesn't work":
 
 ```json
 "_manual": {

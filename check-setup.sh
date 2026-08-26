@@ -34,7 +34,7 @@ for f in profile.md SCORING.md config.json; do
 import json, sys
 sys.path.insert(0, ".")
 import jobscan
-cfg = json.load(open("config.json"))
+cfg, _ = jobscan.load_config()
 found = [f for f in jobscan.find_fill_markers(cfg)
          if not f[0].startswith("config._companies_examples")]
 print(len(found))
@@ -49,7 +49,11 @@ for p, _ in found[:20]:
     marks=""
   fi
   if [ "$n" = "0" ]; then
-    echo "  ${grn}ok${off}   $f -- no FILL: markers left"
+    if [ "$f" = config.json ] && [ -f config.local.json ]; then
+      echo "  ${grn}ok${off}   $f + config.local.json -- no FILL: markers left after merge"
+    else
+      echo "  ${grn}ok${off}   $f -- no FILL: markers left"
+    fi
   else
     echo "  ${yel}TODO${off} $f -- ${n} FILL: marker(s) remaining"; fail=1
     if [ -n "$marks" ]; then
