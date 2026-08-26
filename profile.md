@@ -89,3 +89,84 @@ things you are mid-way through, so the scorer neither credits nor ignores them.
 - FILL: gap.
 - FILL: gap.
 - FILL: gap.
+
+## Target directions and their expected gaps
+
+<!--
+  THE LOAD-BEARING SECTION for scoring. SCORING.md carries the machinery for
+  applying this -- "forgive at most one HARD gap" -- but the directions and
+  the allowances are facts about you, so they live here.
+
+  For each direction you are actually targeting, answer three questions:
+    1. What is the direction? (from what, to what)
+    2. Which gap is therefore EXPECTED, and must not sink a role on its own?
+    3. When does that same gap become disqualifying -- what does a posting
+       look like when the gap IS the job? Give one or two concrete phrasings
+       you would really see in a description.
+
+  Without (3) the rule has no teeth and everything scores as a fit.
+
+  Two to four directions is typical. Say whether you weight them equally: the
+  scorer picks ONE per posting, and if a direction is a long shot, saying so
+  here is what stops it being forgiven as generously as the others.
+-->
+
+FILL: `<candidate>` is moving from `<current field>` toward `<N>` destinations,
+weighted `<equally / in this order>`: **FILL: direction one**, **FILL:
+direction two**.
+
+FILL: one gap expected across ALL directions, if there is one — commonly "has
+never held an industry role". State why it is not disqualifying.
+
+### If it is a FILL: direction-one role
+
+**Some FILL: `<expected gap>` is expected and fine.** Do not treat "wants
+FILL: `<the thing they lack>`" as disqualifying on its own.
+
+It becomes disqualifying when that depth *is* the job — a posting whose core
+responsibilities read "FILL: concrete phrasing", "FILL: concrete phrasing".
+
+### If it is a FILL: direction-two role
+
+**FILL: the expected gap for this direction, and its limit.** Repeat the shape
+above. Delete or add directions to match what you are really targeting.
+
+## Adjacency
+
+<!--
+  What counts as PARTIAL CREDIT at scoring time. SCORING.md reads this list
+  rather than inferring adjacency from shared words, which is the failure this
+  section exists to prevent.
+
+  Write each pair as "what you actually did" vs. "what a posting would call
+  it". Two to five pairs.
+
+  Then the harder half: name what LOOKS adjacent and is not. Shared vocabulary
+  between a thing you did and a thing you did not is a trap, and it is worth
+  spelling out for anything you also listed under "Honest gaps".
+-->
+
+- FILL: what you did, with scale or specifics, vs. "FILL: what the posting
+  calls it", "FILL: another phrasing"
+- FILL: another pair.
+- **Not adjacent, despite the vocabulary:** FILL: the thing you did is *not*
+  the thing it shares words with. Do not grant partial credit on the overlap.
+
+## Skip buckets
+
+<!--
+  The reason categories the Skip list is grouped by. These are the output that
+  feeds back into tuning `block` / `discovery_block` in config.json, so they
+  are worth keeping current: a bucket that keeps filling up is telling you the
+  prescreen is letting a whole category through.
+
+  Start with whatever you can guess and add to it after the first scored run.
+  Ones that apply to almost any search: "the specialty IS the job", "wrong
+  level", "adjacent industry, non-transferable".
+-->
+
+- **FILL: the specialty IS the job** — FILL: the tell, in a few words
+- **FILL: another bucket** — FILL: the tell
+- **wrong level** — roles resting on a track record the candidate does not
+  have, or roles well below their level
+- **adjacent industry, non-transferable**

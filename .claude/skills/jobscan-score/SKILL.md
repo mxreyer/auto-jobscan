@@ -19,11 +19,15 @@ quietly deviating — the rubric encodes decisions that were expensive to reach.
    `python3 jobscan.py` (new since last run) or `--all` (everything open).
 2. **Check the header date.** If it is more than a few days old, say so and
    offer to re-run before you spend effort scoring stale postings.
-3. **`profile.md` and `SCORING.md` must be filled in.** If either still has
-   `FILL:` markers, stop and point at `/jobscan-setup` — scoring against a
-   template produces confident nonsense.
+3. **`profile.md` must be filled in.** If it still has `FILL:` markers, stop
+   and point at `/jobscan-setup` — scoring against a template produces
+   confident nonsense. (`SCORING.md` has no markers to fill; it is the same
+   file for everyone.)
 4. **Read `profile.md` and `SCORING.md` in full, every time.** They drift. Do
-   not score from memory of a previous session.
+   not score from memory of a previous session. Three sections of `profile.md`
+   are the ones `SCORING.md` defers to: **Target directions and their expected
+   gaps**, **Adjacency**, and **Skip buckets**. Scoring without them is
+   scoring without a rubric.
 
 ## Scoring
 

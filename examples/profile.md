@@ -16,8 +16,8 @@
     * the unsupported flight-qualification claim named inside a gap (below)
 
   Note also that the four bold strand names under "Demonstrated capability"
-  are exactly the "Matched via" labels in examples/SCORING.md. Keep the two
-  files in sync in your own copy.
+  become the "Matched via" labels in the shortlist. SCORING.md reads them from
+  here on every run, so there is no second copy to keep in sync.
 
   Nothing here is real; Sandy Cheeks is a cartoon character.
 -->
@@ -124,3 +124,65 @@ operation.
 - **No supplier or vendor management.** Never qualified a supplier, never owned
   a procurement or a build-to-print relationship.
 - **No security clearance**, which gates a large share of Texas aerospace work.
+
+## Target directions and their expected gaps
+
+Sandy is leaving twelve years of solo field engineering for one of **two**
+destinations, weighted equally: **industry hardware engineering** and
+**institutional research science**. The gap that is expected and forgivable is
+different for each, so this section is conditional.
+
+One gap is expected across both and is never on its own disqualifying: **she
+has never worked inside an engineering organisation.** Twelve years of hardware
+that could not be allowed to fail is sustained substantive work; a line asking
+for years of industry experience is not a reason to sink a role.
+
+### If it is an industry hardware role
+
+**Some organisational-process gap is expected and fine.** Do not treat "wants
+someone who has worked inside a formal engineering organisation" as
+disqualifying on its own. No amount of careful solo hardware produces AS9100
+experience, a design-review history or a PLM footprint.
+
+It only sinks the role when that process depth *is* the job — core
+responsibilities reading "own the qualification campaign and DVT programme",
+"drive design reviews across three suppliers", "own the tolerance analysis for
+volume manufacture" — or when an active security clearance is required.
+
+### If it is a research-science role
+
+**Some research-infrastructure gap is expected and fine.** A twelve-year solo
+longitudinal dataset is real research output, and none of it produces a funded
+principal-investigator track record, a supervision history or a large
+publication count.
+
+It only sinks the role when that *is* the job — "establish and fund an
+independent research programme", "supervise PhD students and postdocs", "lead
+a grant portfolio" — or where a hard publication or citation bar is stated.
+
+## Adjacency
+
+- a habitat life-support loop (O2, CO2, humidity, valves, seals, alarms)
+  vs. "ECLSS", "safety-critical fluid systems", "thermal control"
+- a live-specimen end-effector vs. "compliant grasping", "dexterous
+  manipulation", "force-sensitive end-effector"
+- hardware with no possibility of a maintenance visit vs. "design for
+  reliability", "design for maintainability"
+- **Not adjacent, despite the vocabulary:** self-taught CAD and a personal
+  test-and-record habit are *not* institutional verification — no FEA or CFD in
+  anger, no released-drawing practice, no standard anyone else signed off. Both
+  are named absent under "Honest gaps". Do not grant partial credit on the
+  shared words "design", "test" or "verification".
+
+## Skip buckets
+
+- **clearance required** — gates a large share of Texas aerospace work
+- **the process IS the job** — qualification campaigns, DVT, supplier
+  management
+- **the funded-PI track IS the job** — grants, group leadership, teaching load
+- **the specialty IS the job** — FEA/CFD, RF, developmental genetics
+- **software in a hardware costume** — controls or systems roles that are
+  really platform engineering
+- **wrong level** — roles resting on an industry track record she does not
+  have, or roles well below her level
+- **adjacent industry, non-transferable**

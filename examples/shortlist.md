@@ -1,8 +1,8 @@
 # Shortlist — 2026-08-24 (Texas / US-remote)
 
 > **Illustrative example.** What `/jobscan-score` produces from
-> `examples/candidates.md` scored against `examples/profile.md` using
-> `examples/SCORING.md`. The candidate is fictional; the postings are real,
+> `examples/candidates.md` scored against `examples/profile.md` using the
+> repository's `SCORING.md`. The candidate is fictional; the postings are real,
 > fetched 2026-08-24.
 >
 > The eight rows are chosen to exercise the rubric, not to sample the run, so

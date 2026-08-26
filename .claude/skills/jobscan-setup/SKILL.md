@@ -1,15 +1,15 @@
 ---
 name: jobscan-setup
-description: Set up this jobscan repository for a specific person — reads their existing application material (resumes, cover letters, ATS question answers), interviews them to fill the gaps, then writes profile.md, SCORING.md and config.local.json (sources, prescreen and regions). Use when the user wants to configure jobscan for themselves, is starting from the shipped templates, mentions unfilled FILL markers or check-setup.sh, or asks to point Claude at their CV or application folder.
+description: Set up this jobscan repository for a specific person — reads their existing application material (resumes, cover letters, ATS question answers), interviews them to fill the gaps, then writes profile.md and config.local.json (sources, prescreen and regions). Use when the user wants to configure jobscan for themselves, is starting from the shipped templates, mentions unfilled FILL markers or check-setup.sh, or asks to point Claude at their CV or application folder.
 ---
 
 # jobscan setup
 
 Turn the shipped templates into one person's working configuration.
 
-Four files end up changed: `profile.md`, `SCORING.md`, `config.local.json`, and three
+Three files end up changed: `profile.md`, `config.local.json`, and three
 region lists inside `jobscan.py`. `examples/` holds a fully worked version of
-the first three — read them before writing anything, they show the target shape.
+the first two — read them before writing anything, they show the target shape.
 
 **The output that matters is `profile.md`.** Every score depends on it. The
 other three are tuning; this one is the evidence base. Spend the time there.
@@ -110,26 +110,36 @@ The boundary is what makes the rubric able to use it.
 
 Follow the template's structure exactly; `examples/profile.md` shows it filled
 in. The bold strand names under "Demonstrated capability" are load-bearing —
-they become the "Matched via" labels in phase 4.
+`SCORING.md` reads them straight out of this file as the "Matched via" labels,
+so there is no second copy to keep in sync.
 
 Show the finished file and ask for corrections before continuing. Expect a
 round or two here; this is the file worth iterating on.
 
-## Phase 4 — `SCORING.md`
+## Phase 4 — The three scoring sections, still in `profile.md`
 
-Fill in **only** the marked sections and leave everything else verbatim. Most
-of that file is deliberately profile-independent.
+**Never edit `SCORING.md`.** It is profile-independent machinery and stays
+byte-identical for every user; writing someone's field into it is the one
+mistake this phase exists to prevent. Everything below goes in `profile.md`,
+in the sections the template already marks out.
 
-- **Adjacency pairs** — two or three, in the form *what they actually did* vs.
-  *what a posting in their target field calls it*.
-- **"Expected gaps"** — the load-bearing section. It must answer three things:
-  which direction they are moving in, which gap is therefore *expected and
-  forgivable*, and **when that same gap becomes disqualifying**. The third is
-  the one that gets skipped, and without it the rule has no teeth and
-  everything scores as a fit. Give one or two concrete phrasings they would
-  actually read in a job description.
-- **"Matched via"** — the strand names from `profile.md`, verbatim.
-- **Skip buckets** — reason categories for their field.
+- **"Target directions and their expected gaps"** — the load-bearing one. For
+  each direction they are actually targeting, it must answer three things:
+  which direction it is, which gap is therefore *expected and forgivable*, and
+  **when that same gap becomes disqualifying**. The third is the one that gets
+  skipped, and without it the rule has no teeth and everything scores as a
+  fit. Give one or two concrete phrasings they would really read in a job
+  description.
+  Two to four directions is normal. Say whether they are weighted equally —
+  the scorer grants exactly one allowance per posting, so a long-shot
+  direction that is not flagged as one gets forgiven as generously as their
+  strongest.
+- **"Adjacency"** — two to five pairs, in the form *what they actually did* vs.
+  *what a posting in their target field calls it*. Then the harder half: what
+  **looks** adjacent and is not. Anything they listed under "Honest gaps" that
+  shares vocabulary with a real strength belongs here, named explicitly.
+- **"Skip buckets"** — reason categories for their field. A first guess is
+  fine; they get corrected after the first scored run.
 
 ## Write to `config.local.json`, not `config.json`
 
