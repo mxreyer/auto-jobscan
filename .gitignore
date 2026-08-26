@@ -1,0 +1,21 @@
+# Generated output and local state — personal, never committed.
+# NOTE the leading slashes: they anchor these to the repo root. Without them
+# the patterns also match examples/candidates.md and examples/shortlist.md,
+# which are checked-in illustrations and must ship.
+/candidates.md
+/candidates.json
+/shortlist.md
+/seen.json
+/deferred.json
+
+__pycache__/
+
+# Any credentials file, should a future source ever need one.
+/.*.json
+!/.gitignore
+
+# Editor scratch.
+*.swp
+*.swo
+*~
+.DS_Store

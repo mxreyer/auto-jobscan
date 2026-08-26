@@ -1,0 +1,204 @@
+{
+  "_README": "TEMPLATE CONFIG. Replace every value containing 'FILL:' before your first real run -- `./check-setup.sh` lists what is still unfilled, and jobscan.py refuses to run a scan while any remain. A worked, fully-filled and verified version of this file is in examples/config.json. Structure: each source has a `kind` (which platform to talk to). A source with `group: discovery` draws on max_discovery and faces the stricter discovery_* prescreen. See PLATFORMS.md for the platform reference; /jobscan-connector adds a company for you.",
+  "companies": [
+    {
+      "kind": "themuse",
+      "group": "discovery",
+      "company": "(discovery)",
+      "_README": "ONE OF TWO SOURCES THAT WORK FOR ANYBODY, and the only two shipped in this template. This is a company-less sweep across every employer The Muse indexes in your regions -- no key, no credentials, full descriptions (~4k chars). It is how employers you had never heard of reach your shortlist, and it is worth keeping whatever field you are in. Add your own tracked companies alongside it (/jobscan-connector); they draw on a separate budget, so a broad sweep can never starve the boards you deliberately chose. CATEGORY NAMES MUST MATCH THE MUSE EXACTLY -- a wrong one silently returns 0 while --check still prints `ok`. Verified 2026-08-24: 'Science and Engineering', 'Business Operations', 'Data and Analytics', 'Software Engineering', 'Healthcare', 'Product Management' all return results; 'Operations' and 'Engineering' return 0 because they are not real category names.",
+      "locations": [
+        "FILL: city, ST -- one entry per city you would work in, e.g. 'Boston, MA'",
+        "FILL: another city, or delete this line"
+      ],
+      "categories": [
+        "FILL: a real Muse category name -- see _README above for verified ones"
+      ],
+      "levels": [
+        "Mid Level",
+        "Senior Level"
+      ],
+      "pages": 70
+    },
+    {
+      "kind": "himalayas",
+      "group": "discovery",
+      "company": "(remote)",
+      "max": 400,
+      "_README": "THE SECOND UNIVERSAL SOURCE. Remote-only aggregator, ~108k roles, no key, full descriptions (~4.9k chars median). It does NOT duplicate The Muse: metro aggregators index employers against offices, so remote-first companies -- which have no office -- never appear there at all. Multi-employer, hence group:discovery. SET `queries` AND IT USES THE FILTERED SEARCH ENDPOINT, which is the difference between this source earning its place and not. Measured on the same budget: browse firehose (no queries) gave 400 fetched -> 1 past the prescreen, because the raw feed is overwhelmingly remote sales and support; eight keyword queries gave 283 fetched -> 60 past the prescreen. `q` IS FUZZY AND MORE WORDS BROADEN RATHER THAN NARROW -- q=engineer returns 31 hits while q=mechanical engineer returns 147 -- so write specific role phrases, not one broad word. Rows are deduped across queries. Cost is one request per 20 rows (queries x pages). Optional: `seniority` (Entry-level|Mid-level|Senior|Manager|Director|Executive -- note `Senior`, NOT `Senior-level`, which returns HTTP 400), `employment_type`, `exclude_worldwide`. `country` accepts US / USA / us / 'United States' and INCLUDES worldwide-eligible roles unless you pass exclude_worldwide. DELETE THIS SOURCE if you will not take a remote job -- every row it returns is remote.",
+      "queries": [
+        "FILL: a specific role phrase, e.g. 'mechanical engineer' -- see _README",
+        "FILL: another phrase, or delete this line"
+      ],
+      "country": "US",
+      "pages": 3
+    }
+  ],
+  "_companies_examples": {
+    "_README": "NOT USED BY THE TOOL -- reference only. Copy an entry into `companies` above and fill in the identifiers. Each `kind` needs different ones; PLATFORMS.md maps a careers URL to its kind, and /jobscan-connector works this out for a company and verifies it. TOKENS ARE NOT GUESSABLE and are case-sensitive: one real board is `thriveMarket`, and a company's Greenhouse token was `<name>-careers` after three obvious guesses 404'd. Search, do not guess.",
+    "greenhouse": {
+      "kind": "greenhouse",
+      "company": "Display Name",
+      "token": "board-token"
+    },
+    "lever": {
+      "kind": "lever",
+      "company": "Display Name",
+      "token": "board-token"
+    },
+    "ashby": {
+      "kind": "ashby",
+      "company": "Display Name",
+      "token": "board-token"
+    },
+    "smartrecruiters": {
+      "kind": "smartrecruiters",
+      "company": "Display Name",
+      "token": "BoardToken",
+      "_warning": "Returns HTTP 200 with totalFound=0 for an UNKNOWN token instead of 404, so status code alone can never validate this source. Check the count against what the careers page shows."
+    },
+    "workday": {
+      "kind": "workday",
+      "company": "Display Name",
+      "tenant": "tenant",
+      "wd": "wd5",
+      "site": "External_Site_Name",
+      "max": 500,
+      "_warning": "A 422 means the tenant resolved but the site slug is wrong. Take the slug from the real careers URL: tenant.wdN.myworkdayjobs.com/SITE."
+    },
+    "phenom": {
+      "kind": "phenom",
+      "company": "Display Name",
+      "base": "https://careers.example.com",
+      "max": 1000
+    },
+    "radancy": {
+      "kind": "radancy",
+      "company": "Display Name",
+      "base": "https://jobs.example.com",
+      "max": 600
+    },
+    "pageup": {
+      "kind": "pageup",
+      "company": "Display Name",
+      "base": "https://careers.example.edu"
+    },
+    "eightfold": {
+      "kind": "eightfold",
+      "company": "Display Name",
+      "base": "https://careers.example.com",
+      "domain": "example.com",
+      "locations": [
+        "one city per region -- location is radius-based and NOT repeatable"
+      ],
+      "max_per_location": 700
+    },
+    "paradox": {
+      "kind": "paradox",
+      "company": "Display Name",
+      "base": "https://employment.example.edu",
+      "max": 400
+    },
+    "themuse_company": {
+      "kind": "themuse",
+      "company": "Display Name",
+      "company_query": "Employer Name As Muse Spells It",
+      "locations": [
+        "City, ST"
+      ],
+      "pages": 6,
+      "_warning": "For employers whose own portal resists scripting. Omit `categories` unless you have confirmed that employer's postings actually carry them -- see the silent-zero note in PLATFORMS.md."
+    },
+    "himalayas": {
+      "kind": "himalayas",
+      "company": "(remote)",
+      "group": "discovery",
+      "queries": [
+        "mechanical engineer",
+        "research scientist"
+      ],
+      "country": "US",
+      "pages": 3,
+      "max": 400,
+      "_warning": "Remote-only, no key, full descriptions. MUST be group:discovery (multi-employer). Always set `queries` -- without them it falls back to an unfiltered newest-first feed whose yield is near zero."
+    },
+    "clearcompany": {
+      "kind": "clearcompany",
+      "company": "Display Name",
+      "site_id": "UUID-from-the-careers-page-script-tag",
+      "_warning": "Get site_id from the careers page: <script src=https://careers-content.clearcompany.com/js/v1/career-site.js?siteId=UUID>. That tag's src may be UNQUOTED, so grep the raw HTML for `clearcompany` rather than matching src=\"...\". Locations come back as 'City ST' with no comma -- make sure regions.wanted has a bare ' st' form or every role is silently dropped."
+    }
+  },
+  "prescreen": {
+    "_README": "Title-level gate, applied before the LLM scoring pass -- cheap, and it keeps the scoring payload small. A title is rejected if it matches anything in `block`; it then needs at least `min_signal` hits from `signal`. Discovery rows must ADDITIONALLY clear `discovery_block` and match `discovery_signal`, because an open sweep is mostly roles with nothing to do with you, while a company you deliberately tracked deserves the benefit of the doubt on a weak title. EXPECT TO RETUNE THESE FOR MONTHS. The Skip-reasons in your shortlist are the feedback loop (see SCORING.md). The rule of thumb: when noise gets through, TIGHTEN `block` rather than narrowing `signal` -- narrowing `signal` drops real roles silently, while a bad block term shows up the moment you look for a title you expected. `block` entries are regexes (case-insensitive); `signal` entries are plain lowercase substrings.",
+    "block": [
+      "FILL: add the noise categories specific to your field and your boards -- see _block_README",
+      "sales",
+      "account executive",
+      "recruit",
+      "customer success",
+      "marketing",
+      "counsel",
+      "paralegal",
+      "accountant",
+      "payroll",
+      "facilities",
+      "executive assistant",
+      "\\bintern\\b",
+      "internship",
+      "campus",
+      "co-op",
+      "new grad",
+      "university grad",
+      "graduate",
+      "junior",
+      "20\\d\\d start",
+      "director",
+      "vice president",
+      "head of",
+      "chief ",
+      "product manager",
+      "program manager",
+      "engineering manager",
+      "manager,",
+      "manager of"
+    ],
+    "_block_README": "The entries shipped above are the universal ones: wrong function (sales, legal, HR), wrong level (intern, new grad, director, VP), and management tracks. They apply to almost any search -- keep them unless you actually want those roles, and delete `director`/`vice president` if you are senior enough to. Note the anchors: `\\bintern\\b` rather than `intern$`, because 'Robotics Intern - Real-Time Controls' does not end with the word; and `manager of` alongside `manager,` for the same reason. Anchoring bugs are the most common way a block list quietly under-performs. What you must ADD is the noise your own boards produce. Two real examples: a university board was ~85% clinical postings and 'Clinical Lab Scientist' matched the `scientist` signal; an open sweep in an energy-and-finance-heavy state produced a wall of oilfield and insurance titles. You cannot predict these -- run once, read candidates.md, then add. AND BE CAREFUL WHAT YOU BLOCK: one over-broad term silently kills roles you want. `radiolog` was deliberately NOT blocked on that clinical board because it would also have blocked medical-imaging ML research. THE RULE THAT OVERRIDES 'JUST TIGHTEN BLOCK': never block a LEARNABLE gap. A `block` term deletes a role before anyone reads it, while a gap in profile.md is merely weighed against the rest of the posting -- these are different mechanisms and confusing them is the most damaging mistake you can make here. Block HARD GATES only (an active clearance, a licence, work authorization -- things that make the role unobtainable however good the fit). Never block the name of a tool or technology the candidate would learn: the same technology appears in jobs that are otherwise nothing alike, so weigh the surrounding domain instead. A real case: adding `gpu` to a block list looked sensible and would have discarded the highest-scoring role that search ever produced. Ask of every candidate term: is this unobtainable, or merely unfamiliar?",
+    "signal": [
+      "FILL: the terms that make a TITLE worth reading in your field -- 20-30 of them, lowercase substrings",
+      "FILL: include the obvious ones and their abbreviations, e.g. both 'machine learning' and 'ml '",
+      "FILL: include role-shape words as well as domain words, e.g. 'research engineer', 'scientist'"
+    ],
+    "min_signal": 1,
+    "max_to_score": 150,
+    "max_discovery": 40,
+    "_caps_README": "max_to_score caps tracked candidates, max_discovery caps discovery ones, and they are SEPARATE on purpose: sharing one budget let a broad sweep across 50 employers starve the boards you chose. Both discovery sources shipped above share max_discovery, which is the point. All caps are filled round-robin across companies, so one large board cannot crowd out a small one -- a global sort once let a 600-role board bury an 8-role one entirely.",
+    "discovery_signal": [
+      "FILL: the STRICTER list for open search -- only the terms that alone justify reading an unknown employer's posting",
+      "FILL: usually a subset of `signal` with the generic words removed"
+    ],
+    "discovery_block": [
+      "FILL: what an open sweep floods you with in your field",
+      "consultant",
+      "advisor",
+      "solutions architect",
+      "solution engineer",
+      "developer advocate",
+      "delivery",
+      "retail",
+      "manager -"
+    ]
+  },
+  "_manual": {
+    "_README": "Companies with no automated route, and what covers them instead. Record WHAT WAS TRIED -- the exact endpoints and how they failed -- not 'doesn't work'. A negative verdict is only as good as the specific thing that was tried, and two portals in this project's history sat here as 'nothing works' for an entire session before a re-test found a route that had been there all along. When one of these starts mattering, run /jobscan-connector and make it re-derive the verdict from scratch. The realistic fallback for a genuinely closed portal is a saved-search email alert on the company's own site.",
+    "Example Co.": "FILL: e.g. 'BrassRing (partnerid=NNNNN). ProcessSortAndShowMoreJobs answers but returns a fixed 3 featured jobs with Total=0; the documented MatchedJobs endpoint 500s even with a session cookie. Not on The Muse. NO ROUTE.'"
+  },
+  "filter_locations": true,
+  "_filter_locations_README": "true keeps only roles whose location matches `regions.wanted` above; false disables location filtering entirely and scores everything the prescreen passes.",
+  "regions": {
+    "_README": "Region tokens for the location filter, matched case-insensitively against whatever a feed calls the location. THIS IS THE SECOND MOST PERSONAL THING IN THIS FILE after the prescreen. Include: your state's name; its abbreviation in several punctuation forms (', ma' / 'ma,' / ' ma ') because feeds disagree -- 'US, MA, Boston', 'Boston, MA' and 'Boston, Massachusetts' all occur; and every city you would actually work in. Keep 'remote' if you would take a remote job. WATCH FOR CITY-NAME COLLISIONS: a bare 'portland' matches both Oregon and Maine, and Pasadena, Springfield, Columbus, Kansas City and Charleston all exist in more than one state -- qualify them ('portland, or'). `foreign` and `ambiguous` are optional: omit them and jobscan.py falls back to DEFAULT_FOREIGN (a generic list of non-US place names) and DEFAULT_AMBIGUOUS ('locations', 'multiple', 'various' -- the vague strings Workday uses instead of listing sites). Override `foreign` if you are searching outside the US.",
+    "wanted": [
+      "FILL: 'remote' if you would take one, then your state, its abbreviations, and your cities",
+      "FILL: e.g. 'massachusetts', ', ma', 'boston', 'cambridge' -- see _README above"
+    ]
+  }
+}

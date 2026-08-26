@@ -1,0 +1,42 @@
+Sandy Cheeks
+sandy.cheeks@example.com
+
+22 January 2026
+
+Hiring Manager
+Apptronik
+Austin, TX
+
+Dear Hiring Manager,
+
+I am writing about the Staff Mechanical Engineer opening on your dexterity
+team.
+
+I have spent twelve years building manipulators that had to pick up living
+animals without hurting them, underwater, at pressure, with no chance to
+iterate quickly if I got it wrong. The end-effector I am proudest of handles
+a soft-bodied invertebrate without damaging it, which turned out to be a
+harder problem than any rigid-object grasping I have done. Compliance,
+force sensing, and knowing when to stop are not features I added later --
+they were the requirement.
+
+I have also built a powered exoskeleton for surface excursion. It taught me
+more about actuation than the rest of my career combined, mostly through
+being unwearable for the first two years. Joint torque density, thermal
+management in an enclosed suit, and the fact that a human being will simply
+refuse to use something uncomfortable regardless of how well it performs --
+I learned all of that the slow way.
+
+I should be straightforward about what I have not done. I have never worked
+in industry. I have never built the same thing twice, never designed for
+manufacture, and never had a design reviewed by someone whose job was to
+find the flaw in it. Everything I have made is a batch of one, built by the
+person who specified it, which is a way of working I now think has real
+limits.
+
+What I would bring is twelve years of hardware that could not be allowed to
+fail, and a very high tolerance for the unglamorous part of the work.
+
+Thank you for your consideration.
+
+Sandy Cheeks

@@ -1,0 +1,43 @@
+SANDY CHEEKS
+sandy.cheeks@example.com
+
+RESEARCH SCIENTIST -- MARINE ECOLOGY
+
+Marine biologist with an engineering background and seven years of continuous
+field observation at a single study site. Seeking a research position with a
+university, institute or conservation organization.
+
+RESEARCH EXPERIENCE
+
+Principal Investigator, Bikini Bottom Marine Field Station    2014 - present
+
+  * Established and operate an independent field station providing
+    year-round in-situ access to a study site that had previously only been
+    sampled by expedition.
+  * Seven-year (ongoing) longitudinal dataset on local invertebrate and
+    vertebrate behavior, population dynamics, and interspecies interaction.
+  * Direct observational methods: continuous residence at the site rather
+    than episodic sampling. This is the core methodological contribution --
+    behaviors that expedition-based work systematically misses.
+  * Designed and built the sampling instrumentation, including automated
+    water-chemistry loggers and a manipulator for non-destructive specimen
+    handling.
+  * Published 2 peer-reviewed papers; presented at 9 conferences.
+  * Mentored visiting students and local volunteers in field protocol.
+
+Graduate Research Assistant, Lone Star Institute of Technology 2011 - 2014
+
+  * Mechanical systems research; thesis on sealed-environment habitability.
+
+EDUCATION
+
+  M.S. Mechanical Engineering, Lone Star Institute of Technology
+  B.S. Marine Biology, Texas Gulf Coast University
+
+TECHNICAL
+
+  Field methods, experimental design, R and Python for ecological data,
+  instrumentation design, scientific diving, small-craft operation.
+
+NOTE: I am an engineer by training and a biologist by question. The station
+exists because the biology needed it, not the other way around.
