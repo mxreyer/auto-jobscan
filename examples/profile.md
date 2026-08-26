@@ -92,6 +92,15 @@ and they are weighted equally. Role type is NOT a filter, capability fit is.
 - Caveat: this is depth without organisational context — no team, no review
   process, no one checking the work.
 
+### "Matched via" labels
+
+`SCORING.md` builds the shortlist's **Matched via** column from the four bold
+headings above, shortened. The short forms in use, pinned here so they stay
+stable from one run to the next:
+
+life-critical pressure & life-support systems / prototype vehicles &
+manipulators / field science & instrumentation / solo end-to-end delivery
+
 ## Languages & tools
 
 Mechanical design and hand calculation, CAD (self-taught), machining, welding

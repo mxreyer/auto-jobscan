@@ -62,6 +62,34 @@ for p, _ in found[:20]:
   fi
 done
 
+# --- profile.md section skeleton ------------------------------------------
+# SCORING.md defers to three of profile.md's sections BY NAME ("Target
+# directions and their expected gaps", "Adjacency", "Skip buckets"). Rename or
+# drop one and nothing errors -- scoring just quietly loses that input, which
+# is the worst kind of failure this project has. So check the headings exist.
+#
+# examples/profile.md is the reference rather than a list hardcoded here: it is
+# always complete and always current, so it cannot drift out of step with the
+# template the way a second copy would. Extra sections of your own are fine --
+# only missing ones are reported.
+if [ ! -f profile.md ]; then
+  :
+elif [ ! -f examples/profile.md ]; then
+  echo "  ${yel}TODO${off} examples/profile.md missing -- cannot check profile.md's sections"
+else
+  missing=$(comm -23 \
+    <(grep '^## ' examples/profile.md | sort -u) \
+    <(grep '^## ' profile.md | sort -u))
+  if [ -n "$missing" ]; then
+    echo "  ${red}FAIL${off} profile.md is missing section(s) SCORING.md reads by name:"
+    echo "$missing" | sed 's/^/         /'
+    echo "         Restore the heading exactly; scoring silently skips what it cannot find."
+    fail=1
+  else
+    echo "  ${grn}ok${off}   profile.md -- all sections SCORING.md expects are present"
+  fi
+fi
+
 # SCORING.md is deliberately NOT in that loop: it is profile-independent and
 # there is nothing in it to fill. Everything profile-specific it needs lives in
 # profile.md. Flag it only if it has been edited into something personal.

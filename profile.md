@@ -63,6 +63,22 @@ is what makes the scoring direction work:
   the caveat inline rather than hiding it — e.g. "(recent, contract-scale)".
 -->
 
+### "Matched via" labels
+
+<!--
+  SCORING.md builds the shortlist's "Matched via" column from the bold strand
+  headings above, shortened. Shortening is a judgement made fresh on each run,
+  so a heading like "Thermal systems: design → build → qualification (deepest
+  strength)" can come out as a different label every week and the column stops
+  being comparable between shortlists.
+
+  Pin the short forms here, once. They sit a few lines below the headings they
+  come from, so drift between the two is visible rather than silent.
+-->
+
+FILL: your strand labels, shortened to a few words each, separated by " / " —
+in the same order as the bold headings above.
+
 ## Languages & tools
 
 FILL: a flat list of what you actually use. Add a short "Learning:" tail for

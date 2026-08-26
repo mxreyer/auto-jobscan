@@ -159,10 +159,11 @@ A markdown table, best first, then one short paragraph per role scoring ≥6:
 - **Score 0–10** = the fraction of the role's requirements the candidate
   plausibly covers.
 - **Matched via** = which strand carried it. A label only — it is not a second
-  score. **Use the bold strand headings under "Demonstrated capability" in
-  `profile.md`**, shortened to a few words each. Reading them out of
-  `profile.md` on every run is what stops the two files drifting apart — do not
-  keep a second copy of the list here.
+  score. **Use the short forms pinned in `profile.md` under "Matched via"
+  labels**, which are the bold strand headings under "Demonstrated capability"
+  shortened. Take them from there verbatim rather than re-shortening the
+  headings yourself — that is what keeps the column comparable between runs.
+  Do not keep a second copy of the list here.
 - **Key gap** = the one thing most likely to get this application screened out.
 
 Then: **Apply / Maybe / Skip**.
