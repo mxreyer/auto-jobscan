@@ -23,7 +23,7 @@ fi
 # --- the three files you must make yours ----------------------------------
 echo
 echo "${bold}Files to make yours${off}"
-for f in profile.md SCORING.md config.json; do
+for f in profile.md config.json; do
   if [ ! -f "$f" ]; then
     echo "  ${red}FAIL${off} $f is missing -- copy examples/$f as a starting point"; fail=1
     continue
@@ -62,6 +62,17 @@ for p, _ in found[:20]:
   fi
 done
 
+# SCORING.md is deliberately NOT in that loop: it is profile-independent and
+# there is nothing in it to fill. Everything profile-specific it needs lives in
+# profile.md. Flag it only if it has been edited into something personal.
+if [ ! -f SCORING.md ]; then
+  echo "  ${red}FAIL${off} SCORING.md is missing -- restore it from the repo"; fail=1
+elif grep -q 'FILL:' SCORING.md 2>/dev/null; then
+  echo "  ${yel}TODO${off} SCORING.md has FILL: markers -- it should not; restore it"
+else
+  echo "  ${grn}ok${off}   SCORING.md -- the rubric, profile-independent, nothing to fill"
+fi
+
 # --- generated state ------------------------------------------------------
 echo
 echo "${bold}State${off}"
@@ -92,6 +103,6 @@ else
   echo
   echo "  To watch it run before setting up your own:"
   echo "    cp examples/config.json config.json && cp examples/profile.md profile.md \\"
-  echo "      && cp examples/SCORING.md SCORING.md && python3 jobscan.py --all"
+  echo "      && python3 jobscan.py --all"
 fi
 exit 0

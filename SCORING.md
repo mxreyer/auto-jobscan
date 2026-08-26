@@ -3,18 +3,22 @@
 Read `profile.md`, then score every role in `candidates.md`.
 
 <!--
-  TEMPLATE. Most of this file is profile-independent and should be left alone.
-  Exactly TWO sections must be adapted to your profile, both marked FILL:
-  below, plus a handful of domain illustrations marked "example, replace":
+  THIS FILE IS PROFILE-INDEPENDENT. Do not adapt it, and do not paste your own
+  field into it -- it carries the scoring machinery and nothing else, so it
+  stays identical for every user and upstream can improve it under you.
 
-    1. "Expected gaps"  — LOAD-BEARING. This is the section that most changes
-                          scores. Get it wrong and the scorer forgives the
-                          wrong weakness.
-    2. "Matched via"    — must list the strand names you used as the bold
-                          headings in profile.md.
+  Everything profile-specific it needs lives in profile.md, in three sections
+  this file points at by name:
 
-  A worked, filled-in version of this exact file is in examples/SCORING.md.
-  `./check-setup.sh` reports what is still unfilled.
+    "Target directions and their expected gaps"  -- LOAD-BEARING. The section
+        that most changes scores: which directions the candidate is aiming at,
+        and which gap is forgivable for each.
+    "Adjacency"  -- what counts as partial credit, and what merely shares
+        vocabulary.
+    "Skip buckets"  -- the reason categories the Skip list is grouped by.
+
+  They live there because they are facts about the person, not about the
+  rubric. `./check-setup.sh` reports what is still unfilled in profile.md.
 -->
 
 ## What to score, and what not to
@@ -55,13 +59,10 @@ applying to.
 - Separate **must-haves** (stated as required, or clearly load-bearing for the
   day-to-day) from **nice-to-haves**. A missing nice-to-have barely matters.
 - An **adjacent** match counts as partial credit. Judge adjacency by what the
-  work actually demands, not by shared vocabulary.
-  <!-- FILL: two or three adjacency pairs from your own field, in the form
-       "what the candidate did" vs. "what the posting calls it". Examples from
-       the worked profile in examples/, replace these:
-         habitat life-support design   vs. "ECLSS" / "thermal-fluids systems"
-         live-specimen manipulator     vs. "compliant grasping"
-         no-maintenance-visit hardware vs. "design for reliability" -->
+  work actually demands, not by shared vocabulary. **The pairs that count as
+  adjacent for this candidate — and the ones that look adjacent but are not —
+  are in `profile.md` under "Adjacency".** Work from that list. Inventing a new
+  pair from shared words is the failure this rule exists to prevent.
 - Years-of-industry-experience requirements are soft. Count sustained,
   substantive work as real experience even when it was not an industry job —
   a PhD, a trade, self-directed projects at scale. Do not drop a role on a
@@ -71,23 +72,50 @@ applying to.
 
 ## Expected gaps
 
-<!-- FILL: THE LOAD-BEARING SECTION. Rewrite the paragraph below for your own
-     profile. It must answer three questions:
-       1. What direction is the candidate moving in? (from what, to what)
-       2. Which gap is therefore EXPECTED, and should not sink a role on its
-          own?
-       3. When does that same gap become disqualifying — i.e. what does a
-          posting look like when the gap IS the job? Give one or two concrete
-          phrasings you would actually see in a description.
-     Without (3) the rule has no teeth and everything scores as a fit. -->
+Somebody changing direction always arrives with a gap. Scoring as though they
+did not is useless, and scoring every gap as fatal is equally useless — the
+whole job of this section is to say *which* gap is expected, and where the
+expectation runs out.
 
-FILL: `<candidate>` is moving from `<current field>` toward `<target field>`.
-**Some `<expected gap>` is expected and fine** — do not treat "wants
-`<expected gap>` experience they lack" as disqualifying on its own. It only
-sinks a role when that depth *is* the job (e.g. a posting whose core
-responsibilities read "FILL: concrete phrasing", "FILL: concrete phrasing").
-A role wanting `<the candidate's real strengths>`, with `<expected gap>` as
-context rather than as the work, is a good fit even if they have never done it.
+**The candidate's target directions, and the gap that is forgivable for each,
+are in `profile.md` under "Target directions and their expected gaps".** Read
+them there. What follows is the machinery for applying them.
+
+**Decide which direction the posting belongs to before applying any
+allowance.** The allowances are per-direction, and reaching for the wrong one
+forgives the wrong weakness — which produces a confident-looking Apply on a
+role the candidate cannot do.
+
+### Forgive at most one HARD gap — but do not count learnable ones against it
+
+With several directions in play, stacking allowances is how a search inflates
+every posting into an Apply. Pick the single direction the posting actually
+belongs to and grant that allowance, once.
+
+Then separate what is left over:
+
+- A **hard gap** is a domain or credential the candidate cannot acquire on the
+  job in any reasonable time — a required licence or clearance, or an
+  unfamiliar field that IS the subject matter of the role. Forgiving a second
+  one of these is how a posting becomes a confident mistake.
+- A **learnable gap** is a tool, framework or technique they would pick up if
+  the rest of the role fitted — a specific language, a library, a cloud
+  platform. These cost a point each. **They do not consume the allowance**, and
+  two of them together do not turn a good role into a Skip.
+
+If a role genuinely spans two directions, apply the **stricter** of the
+applicable allowances and say in the write-up which one you applied and why. A
+role needing two or more *hard* gaps forgiven at once is a Skip, however good
+the title looks.
+
+<!--
+  The hard/learnable split is load-bearing and was added on evidence. A first
+  draft read "never forgive more than one gap at a time" without it, and
+  charged a strong role twice over -- once for its unfamiliar domain, once for
+  a framework the candidate would have picked up in a fortnight -- dropping it
+  two points below where it belonged. Only the first of those is actually
+  hard. The counting rule was wrong, not the judgement.
+-->
 
 ### A learnable gap must never become a prescreen filter
 
@@ -131,11 +159,10 @@ A markdown table, best first, then one short paragraph per role scoring ≥6:
 - **Score 0–10** = the fraction of the role's requirements the candidate
   plausibly covers.
 - **Matched via** = which strand carried it. A label only — it is not a second
-  score.
-  <!-- FILL: list your strands here, matching the bold headings under
-       "Demonstrated capability" in profile.md, separated by " / ". The example
-       profile uses: product development / production & operations /
-       food safety & quality / formal training -->
+  score. **Use the bold strand headings under "Demonstrated capability" in
+  `profile.md`**, shortened to a few words each. Reading them out of
+  `profile.md` on every run is what stops the two files drifting apart — do not
+  keep a second copy of the list here.
 - **Key gap** = the one thing most likely to get this application screened out.
 
 Then: **Apply / Maybe / Skip**.
@@ -178,11 +205,10 @@ the employers' own words on someone else's page.
 Be blunt. A shortlist that says "apply" to everything is useless — the entire
 value here is preventing applications that were never going to land.
 
-Group the Skip list by *reason* rather than listing every role.
-<!-- FILL: reason buckets for your field. The example uses "regulatory affairs
-     is the job", "plant maintenance", "wrong level". Generic ones that apply
-     to almost any search: "the specialty IS the job", "wrong level",
-     "adjacent industry, non-transferable". -->
+Group the Skip list by *reason* rather than listing every role. **The reason
+buckets for this search are in `profile.md` under "Skip buckets".** If a reason
+turns up twice that is not on that list, add it there — the buckets are a
+record of what this particular search keeps having to throw away.
 The reasons are what tell you whether a whole company is worth tracking, and
 they feed straight back into tuning `block` / `discovery_block` in
 `config.json`. Treat that as part of the output, not an afterthought.

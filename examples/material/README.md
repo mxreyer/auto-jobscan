@@ -52,8 +52,8 @@ material has, and each piece is there to make the skill work for its answer:
 
 ## This has actually been run
 
-`examples/profile.md` and `examples/SCORING.md` are **not hand-written** — they
-are the output of running `/jobscan-setup` against this folder on 2026-08-24.
+`examples/profile.md` is **not hand-written** — it is the output of running
+`/jobscan-setup` against this folder on 2026-08-24.
 So the claim that a good run lands close to them is verified rather than
 assumed. Run it yourself and you should get something similar.
 
