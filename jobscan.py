@@ -21,6 +21,9 @@ import adapters
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(HERE, "config.json")
+# Optional per-user overlay, merged onto CONFIG at load. Keeps your tuning
+# out of the shipped template so `git pull` never conflicts with it.
+CONFIG_LOCAL = os.path.join(HERE, "config.local.json")
 SEEN = os.path.join(HERE, "seen.json")
 # Jobs that PASSED the prescreen but lost to a cap. Held back from
 # seen.json so they return next run, and given first claim when they do.
@@ -35,6 +38,80 @@ def load_json(path, default):
         return default
     with open(path) as f:
         return json.load(f)
+
+
+def _is_fill(v):
+    return isinstance(v, str) and "FILL:" in v
+
+
+def merge_into_list(base, overlay):
+    """`key+` semantics: merge the overlay's entries into the base list.
+
+    An overlay entry carrying an `id` that matches one already in base is
+    merged onto that entry rather than appended -- so upstream can improve a
+    shipped source's defaults or its `_README` without your copy going stale.
+    Everything else is appended, duplicates skipped.
+
+    FILL: placeholders in the base list are dropped: a template list that is
+    nothing but placeholders is exactly what the overlay is there to fill, and
+    leaving them in would trip the unfilled-marker check on a configured repo.
+    """
+    out = [v for v in base if not _is_fill(v)]
+    by_id = {v["id"]: i for i, v in enumerate(out)
+             if isinstance(v, dict) and "id" in v}
+    for v in overlay:
+        if isinstance(v, dict) and v.get("id") in by_id:
+            i = by_id[v["id"]]
+            out[i] = deep_merge(out[i], v)
+        elif v not in out:
+            out.append(v)
+    return out
+
+
+def deep_merge(base, overlay):
+    """Overlay config.local.json onto the shipped config.json.
+
+        dict     merges key-wise, recursively
+        "key+"   merges into the list at `key` -- see merge_into_list
+        "key"    replaces outright
+        null     deletes the key inherited from the base
+
+    The asymmetry is the point: `signal` wants replacing (the template ships
+    placeholders), `block` wants extending (the template ships 29 real entries
+    that everyone benefits from, and silently dropping them is a bug you would
+    not notice -- the run just quietly reports jobs you did not want).
+    """
+    if not (isinstance(base, dict) and isinstance(overlay, dict)):
+        return overlay
+    out = dict(base)
+    for k, v in overlay.items():
+        if k.endswith("+"):
+            k = k[:-1]
+            cur = out.get(k, [])
+            if not (isinstance(cur, list) and isinstance(v, list)):
+                sys.exit(f"[jobscan] config.local.json: '{k}+' needs a list on "
+                         f"both sides -- config.json has "
+                         f"{type(cur).__name__}, the overlay has "
+                         f"{type(v).__name__}.")
+            out[k] = merge_into_list(cur, v)
+        elif v is None:
+            out.pop(k, None)
+        elif isinstance(v, dict):
+            out[k] = deep_merge(out.get(k), v)
+        else:
+            out[k] = v
+    return out
+
+
+def load_config():
+    """Return (merged config, overlay-was-used). None if config.json is absent."""
+    cfg = load_json(CONFIG, None)
+    if cfg is None:
+        return None, False
+    local = load_json(CONFIG_LOCAL, None)
+    if local is None:
+        return cfg, False
+    return deep_merge(cfg, local), True
 
 
 def find_fill_markers(node, path="config"):
@@ -299,7 +376,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="verify portals only")
     args = ap.parse_args()
 
-    cfg = load_json(CONFIG, None)
+    cfg, overlaid = load_config()
     if cfg is None:
         sys.exit(f"[jobscan] no {CONFIG}. Copy examples/config.json, or see README.md.")
 
@@ -312,7 +389,9 @@ def main():
         msg = (f"[jobscan] config.json still has {len(unfilled)} unfilled "
                f"FILL: placeholder(s):\n{where}{more}\n"
                "    Run ./check-setup.sh, or /jobscan-setup to fill them in with Claude.\n"
-               "    A worked example is in examples/config.json.")
+               "    A worked example is in examples/config.json."
+               + ("\n    config.local.json was applied, so these are markers it "
+                  "does not override yet." if overlaid else ""))
         if not args.check:
             sys.exit(msg + "\n[jobscan] refusing to scan -- it would silently "
                            "return zero candidates.")

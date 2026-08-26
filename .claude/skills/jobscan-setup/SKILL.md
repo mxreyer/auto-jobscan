@@ -1,13 +1,13 @@
 ---
 name: jobscan-setup
-description: Set up this jobscan repository for a specific person — reads their existing application material (resumes, cover letters, ATS question answers), interviews them to fill the gaps, then writes profile.md, SCORING.md and config.json (sources, prescreen and regions). Use when the user wants to configure jobscan for themselves, is starting from the shipped templates, mentions unfilled FILL markers or check-setup.sh, or asks to point Claude at their CV or application folder.
+description: Set up this jobscan repository for a specific person — reads their existing application material (resumes, cover letters, ATS question answers), interviews them to fill the gaps, then writes profile.md, SCORING.md and config.local.json (sources, prescreen and regions). Use when the user wants to configure jobscan for themselves, is starting from the shipped templates, mentions unfilled FILL markers or check-setup.sh, or asks to point Claude at their CV or application folder.
 ---
 
 # jobscan setup
 
 Turn the shipped templates into one person's working configuration.
 
-Four files end up changed: `profile.md`, `SCORING.md`, `config.json`, and three
+Four files end up changed: `profile.md`, `SCORING.md`, `config.local.json`, and three
 region lists inside `jobscan.py`. `examples/` holds a fully worked version of
 the first three — read them before writing anything, they show the target shape.
 
@@ -131,9 +131,30 @@ of that file is deliberately profile-independent.
 - **"Matched via"** — the strand names from `profile.md`, verbatim.
 - **Skip buckets** — reason categories for their field.
 
+## Write to `config.local.json`, not `config.json`
+
+**Leave `config.json` alone.** It is the shipped template; everything you
+configure in Phases 5 and 6 goes into `config.local.json`, which `jobscan.py`
+merges over it at load. That is what keeps their tuning from colliding with the
+next `git pull`. Read the `_local_README` key in `config.json` for the merge
+rules, and note the two that matter most here:
+
+- **`"block+"` and `"discovery_block+"`, never `"block"`.** The `+` adds to the
+  29 universal noise terms the template ships. Replacing the list drops them
+  silently — the run just starts reporting roles they did not want, with
+  nothing to say why.
+- **`"signal+"` / `"discovery_signal+"` / `"wanted+"`** — the template ships
+  only `FILL:` placeholders for these, which the merge strips, so `+` gives a
+  clean list of exactly what you wrote.
+- To configure a **shipped** source (the Muse and Himalayas discovery sources),
+  add an entry to `"companies+"` carrying that source's `id` — `muse-discovery`
+  or `himalayas-remote` — and only the keys you are setting. It merges onto the
+  shipped entry, so its `_README` and defaults stay current. Tracked companies
+  you add have no `id` and simply append.
+
 ## Phase 5 — Regions
 
-Two keys in `config.json`, and they are not the same thing:
+Two keys, and they are not the same thing:
 
 1. `regions.wanted` — the place tokens the **location filter** matches against.
 2. the Muse source's `locations` — the cities that **search** is restricted to.
@@ -150,9 +171,9 @@ in particular that a bare "remote" is not evidence of a domestic role.
 
 ## Phase 6 — The prescreen
 
-Fill `signal`, `discovery_signal`, and the field-specific additions to `block`
-and `discovery_block` in `config.json`. Read the `_README` keys in that file
-first; they carry the tuning rules.
+Fill `signal+`, `discovery_signal+`, and the field-specific additions to
+`block+` and `discovery_block+` in `config.local.json`. Read the `_README` keys
+in `config.json` first; they carry the tuning rules.
 
 Set the Muse `categories` from names you have **verified return results** —
 a wrong category name silently returns zero while `--check` still prints `ok`.

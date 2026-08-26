@@ -140,7 +140,8 @@ cannot catch for you.
 | `LICENSE` | MIT |
 | `check-setup.sh` | read-only check: what is still unfilled, and what to do next |
 | `.claude/skills/` | `/jobscan-setup`, `/jobscan-connector`, `/jobscan-score` |
-| `config.json` | sources + prescreen rules. The thing you tune. |
+| `config.json` | sources + prescreen rules. The shipped template. |
+| `config.local.json` | optional per-user overlay merged onto `config.json` at load — the thing you tune, kept out of git |
 | `adapters.py` | one function per platform, all returning the same job dict |
 | `jobscan.py` | fetch → delta vs `seen.json` → locations → prescreen (incl. dedupe) → tier/budget split → hydrate → re-check locations → write → defer the capped |
 | `profile.md` | your capabilities *and honest gaps*, distilled from your CV |
@@ -156,6 +157,47 @@ cannot catch for you.
 
 `candidates.*`, `shortlist.md`, `seen.json` and `deferred.json` are gitignored —
 they are generated, they churn daily, and a shortlist is personal.
+`config.local.json` is gitignored too, for a different reason: it is not
+generated, it is yours — real employers, your regions, your keywords.
+
+## `config.local.json` — keeping your tuning out of the template
+
+`config.json` is the shipped template. You can edit it directly and everything
+works — but then every `git pull` that improves the template collides with your
+tuning, and a term added upstream to the universal `block` list never reaches
+you.
+
+The alternative is to leave `config.json` alone and put your values in
+`config.local.json`, which `jobscan.py` merges over it at load:
+
+```jsonc
+{
+  "prescreen": {
+    "block+":  ["your noise terms"],     // ADDS to the 29 shipped ones
+    "signal+": ["your title terms"],     // template ships only placeholders
+    "max_to_score": 600                  // no "+" -- replaces outright
+  },
+  "regions": { "wanted+": ["remote", "boston"] },
+  "companies+": [
+    { "id": "muse-discovery", "locations": ["Boston, MA"] },  // fills in a shipped source
+    { "kind": "greenhouse", "company": "acme", "group": "tracked" }  // adds one
+  ]
+}
+```
+
+| in the overlay | means |
+|---|---|
+| a dict | merged key-wise, recursively |
+| `"key+"` | merged into the list at `key`: an entry whose `id` matches a shipped one merges onto it, the rest append, and `FILL:` placeholders in the template are dropped |
+| `"key"` | replaces outright |
+| `null` | deletes the key inherited from the template |
+
+**Prefer `block+` to `block`.** Replacing the list silently drops the universal
+noise terms, and nothing tells you — the run just quietly reports roles you did
+not want.
+
+`check-setup.sh` and the unfilled-`FILL:` check both run against the *merged*
+config, so an overlay that fills a placeholder counts as filled.
 
 ## config.json reference
 
