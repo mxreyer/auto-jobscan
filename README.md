@@ -136,12 +136,21 @@ On `--check`, **read the counts, not just the ok/FAIL flags.** A source that
 returns zero still prints `ok`, and that is the one failure mode this report
 cannot catch for you.
 
+Every shortlist has the same nine sections in the same order — the skeleton is
+in `SCORING.md`, and `./check-shortlist.sh` verifies it. That script also
+refuses a second scoring pass over a `candidates.md` that has already been
+scored: each shortlist stamps the `sha256` of the file it came from, so
+running `/jobscan-score` twice on one batch is caught rather than quietly
+producing two disagreeing rankings. Re-run `python3 jobscan.py` for a fresh
+batch instead.
+
 ## Files
 
 | file | what it is |
 |---|---|
 | `LICENSE` | MIT |
 | `check-setup.sh` | read-only check: what is still unfilled, and what to do next |
+| `check-shortlist.sh` | read-only check: the shortlist's section skeleton, and whether this `candidates.md` was already scored |
 | `.claude/skills/` | `/jobscan-setup`, `/jobscan-connector`, `/jobscan-score` |
 | `config.json` | sources + prescreen rules. The shipped template. |
 | `config.local.json` | optional per-user overlay merged onto `config.json` at load — the thing you tune, kept out of git |

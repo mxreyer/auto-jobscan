@@ -15,6 +15,30 @@ quietly deviating — the rubric encodes decisions that were expensive to reach.
 
 ## Before scoring
 
+**Run `./check-shortlist.sh` first, before anything else.** It answers two
+questions: has this `candidates.md` already been scored, and does the existing
+`shortlist.md` have the right shape. Then:
+
+0. **Score each `candidates.md` exactly once.** If the check reports the
+   current file's `sha256` in a shortlist that already exists, **stop and say
+   so** — do not score it again. Scoring the same input twice burns a long
+   pass to produce a slightly different ranking of the same rows, and leaves
+   two files disagreeing about the same postings with nothing to say which is
+   authoritative. Offer the three real options instead:
+
+   - read the existing shortlist back to them (usually what they wanted);
+   - `python3 jobscan.py` for roles new since that run, or `--all` for
+     everything open — a fresh `candidates.md` is a new input and scores
+     normally;
+   - re-score deliberately, if the *rubric or profile* changed since. This is
+     the only good reason, it needs the user to say so explicitly, and the new
+     file goes to a dated name (`shortlist-<date>-run2.md`) with a line at the
+     top saying what changed — never silently over the first one.
+
+   The same rule holds inside one session: having scored, do not re-run the
+   pass because the user asks a follow-up question about the results. Answer
+   from the shortlist you wrote.
+
 1. **`candidates.md` must exist.** If it does not, the user needs a run first:
    `python3 jobscan.py` (new since last run) or `--all` (everything open).
 2. **Check the header date.** If it is more than a few days old, say so and
@@ -51,9 +75,18 @@ actually does — the user has no context for the name.
 
 ## Output
 
-Write `shortlist.md` in the format `SCORING.md` specifies: the table, a
-paragraph for each role scoring ≥6, the Apply/Maybe/Skip split, **the Applies
-reproduced in full**, the Skip list grouped by reason, and the flags.
+Write `shortlist.md` to the **section skeleton in `SCORING.md`** — the same
+nine `##` headings, spelled the same way, in the same order, every run, with
+the stamp line under the title. Do not improvise a heading because a run felt
+different ("Do this instead", "Ranked table", "Config proposals", "Closing the
+loop" are all headings real runs invented; each one is a file
+`/jobscan-master` and the next reader have to special-case). A section with
+nothing in it keeps its heading and says "None this run." — an empty
+Apply list is a result, and it should look the same every time it happens.
+
+Then **run `./check-shortlist.sh` again on what you wrote** and fix what it
+reports before telling the user you are done. It is mechanical; your own
+reading of your own output is not.
 
 Three things that make a shortlist useful rather than decorative:
 
@@ -74,8 +107,12 @@ Three things that make a shortlist useful rather than decorative:
   the next `## N.` heading starts, and that the last entry does not absorb the
   **Sources** block at the end of `candidates.md`.
 
-Header line: the date, the region filter, source and role counts from the
-`candidates.md` header, and a one-line reminder of what the score means.
+Header block, in this order: the `Scored from:` stamp (`SCORING.md` gives the
+exact form — get the hash with `shasum -a 256 candidates.md`), then the date,
+the region filter, source and role counts from the `candidates.md` header, and
+a one-line reminder of what the score means. The stamp is what stops the same
+`candidates.md` being scored twice, so it is not optional and it is not
+reworded.
 
 ## Then close the loop — this is the part that gets skipped
 
@@ -128,4 +165,8 @@ README.md.
 ## After
 
 `shortlist.md` is gitignored and overwritten each run. If the user wants to
-keep one, suggest a dated copy before the next run.
+keep one, suggest a dated copy before the next run — and make the copy
+yourself before starting a new scoring pass, rather than after overwriting it.
+
+The dated copies are also what the duplicate check reads, so they keep their
+stamp line: never strip it when archiving.

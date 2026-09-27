@@ -12,15 +12,30 @@
 > checkable without them. The full descriptions are redacted in
 > `examples/candidates.md` rather than republished — see the note there.
 >
+> The nine `##` sections below, in this order, are the fixed skeleton every
+> run writes — `SCORING.md` defines it and `./check-shortlist.sh` verifies it.
+> A section with nothing in it keeps its heading and says "None this run."
+>
 > The *"The Applies, in full"* section below is what a real run ends with:
 > every Apply's `candidates.md` entry — location, URL, prescreen hits and the
 > employer's description — reproduced so the file can be applied from on its
 > own. Here the description text is the redaction placeholder rather than the
 > employer's copy; everything else is as a real run writes it.
 
+Scored from: candidates.md · 2026-08-24 · 8 roles · sha256 89b080df0396
+
 14 sources · 2,066 open roles · 1,666 in target locations · 124 scored
 (8 shown here).
 Score = fraction of *the role's* requirements this profile covers.
+
+## Do this one first
+
+**Firefly Aerospace — Environmental Test Engineer III (8).** It is the only
+row whose central requirement — owning test plans end to end — the ATS answers
+already evidence in the candidate's own words. Write-up under *The roles
+scoring ≥6*; the full posting is reproduced further down.
+
+## Table
 
 | # | Company | Role | Loc | Score | Matched via | Key gap |
 |---|---------|------|-----|-------|-------------|---------|
@@ -33,9 +48,7 @@ Score = fraction of *the role's* requirements this profile covers.
 | 7 | Pindrop | Research Scientist II *(discovery)* | Remote, US | 3 | — | audio/ML security research — title says nothing |
 | 8 | Howard Hughes Medical Institute | Postdoctoral Scientist, Mendell Lab *(discovery)* | Remote, US | 2 | — | RNA biology; wrong kind of biologist |
 
-**Apply: 1, 2, 3, 4. Maybe: 5. Skip: 6, 7, 8.**
-
----
+## The roles scoring ≥6
 
 **Firefly — Environmental Test Engineer III (8). Do this one first.** The
 responsibilities are *"developing test plans, designing test fixtures,
@@ -93,7 +106,16 @@ Gaps: cryogenics, P&ID formalism, and design-to-code, which has never applied.
 Located in **Briggs, TX** — worth noting because before the region tokens were
 fixed, every Briggs role was silently dropped as out-of-region.
 
----
+**Sierra Space — ME III, Thermal Systems (6), the Maybe.** Responsible-Engineer
+ownership of hardware packages is squarely the candidate's shape, but the
+posting is written around spacecraft thermal-control specialism, which is one
+real must-have uncovered — hence 6 rather than 7. The feed says `2 Locations`
+and the description does not resolve them, so in-region is unconfirmed; see
+the flag below.
+
+## Apply / Maybe / Skip
+
+**Apply: 1, 2, 3, 4. Maybe: 5. Skip: 6, 7, 8.**
 
 ## The Applies, in full
 
@@ -283,11 +305,18 @@ ipsum dolor sit amet consectetur adipiscing
   this shortlist.
 - **`2 Locations` is still the largest uncertainty**, at 15 of 89 tracked
   candidates, every one of them Sierra Space. A hydrate-on-shortlist pass remains the fix.
+
+## Config feedback
+
 - **Next block-term candidates if they recur:** `Subject Matter Expert` (online
   universities) and `Commissioning` (plant startup roles that match
-  `instrumentation`).
-
----
+  `instrumentation`). Neither is proposed yet — each has appeared once, and a
+  `block` term added on one sighting costs more than the row it removes.
+- **Nothing to remove from `signal` this run.** The two worst rows (7, 8)
+  arrived on `research scientist`, which also produced row 3; that is the
+  trade described in the flags above, not a tuning error.
+- **No source is dead weight yet** — judged on Apply count, Firefly's
+  ClearCompany board and the Himalayas sweep each produced one.
 
 ## Sources
 
