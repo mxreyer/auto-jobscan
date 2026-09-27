@@ -30,7 +30,12 @@ for f in profile.md config.json; do
   fi
   if [ "$f" = config.json ]; then
     # Reuse jobscan's own marker scan so the two can never disagree.
-    n=$(python3 -c '
+    # Count on the first line, marker paths after it -- one stream, so this
+    # needs no scratch file. It used to split them across stdout/stderr and
+    # park stderr in /tmp, which made the check WRITE (the header two lines
+    # up promises it does not) and made it report "error FILL: marker(s)
+    # remaining" for a perfectly good config anywhere /tmp is not writable.
+    out=$(python3 -c '
 import json, sys
 sys.path.insert(0, ".")
 import jobscan
@@ -39,9 +44,10 @@ found = [f for f in jobscan.find_fill_markers(cfg)
          if not f[0].startswith("config._companies_examples")]
 print(len(found))
 for p, _ in found[:20]:
-    print(p, file=sys.stderr)
-' 2>/tmp/jobscan_fill.$$ ) || n=error
-    marks=$(cat /tmp/jobscan_fill.$$ 2>/dev/null); rm -f /tmp/jobscan_fill.$$
+    print(p)
+' 2>/dev/null) || out=error
+    n=${out%%$'\n'*}
+    marks=$(printf '%s' "$out" | tail -n +2)
   else
     # grep -c prints 0 and exits 1 when there are no matches; keep the 0.
     n=$(grep -c 'FILL:' "$f" 2>/dev/null || true)
