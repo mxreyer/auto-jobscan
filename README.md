@@ -37,6 +37,7 @@ above — writing those files, adding employers, and doing the ranking:
 | **`/jobscan-setup`** | Point it at a folder of your résumés, cover letters and ATS answers. It reads them, asks about what those documents *cannot* tell it — chiefly your gaps — and writes all three files with you reviewing each one. No folder? It interviews you instead. |
 | **`/jobscan-connector <company>`** | Works out which ATS an employer uses, verifies it with a real request, and adds it to `config.json`. |
 | **`/jobscan-score`** | Ranks `candidates.md` into `shortlist.md` with reasons, then turns the skip reasons back into filter fixes. The one you will use weekly. |
+| **`/jobscan-master`** | Merges every dated shortlist into one `master-shortlist.md` of the roles that are **still open**, checking each link against its own platform, and optionally a `closed-postings.md` of what expired unapplied. Run it when the shortlists have piled up. |
 
 Run them from Claude Code with this repo as the working directory. **Skills are
 discovered when a session starts**, so a freshly cloned repo needs one restart
@@ -144,6 +145,15 @@ running `/jobscan-score` twice on one batch is caught rather than quietly
 producing two disagreeing rankings. Re-run `python3 jobscan.py` for a fresh
 batch instead.
 
+`shortlist.md` is overwritten every run, so keep a dated copy of any you want.
+Once several have piled up:
+
+    /jobscan-master
+
+merges them into `master-shortlist.md`, dropping everything whose posting has
+since closed — roughly a third of a batch within a month — and keeping, with a
+note, anything a rate-limited board would not confirm either way.
+
 ## Files
 
 | file | what it is |
@@ -151,7 +161,7 @@ batch instead.
 | `LICENSE` | MIT |
 | `check-setup.sh` | read-only check: what is still unfilled, and what to do next |
 | `check-shortlist.sh` | read-only check: the shortlist's section skeleton, and whether this `candidates.md` was already scored |
-| `.claude/skills/` | `/jobscan-setup`, `/jobscan-connector`, `/jobscan-score` |
+| `.claude/skills/` | `/jobscan-setup`, `/jobscan-connector`, `/jobscan-score`, `/jobscan-master` |
 | `config.json` | sources + prescreen rules. The shipped template. |
 | `config.local.json` | optional per-user overlay merged onto `config.json` at load — the thing you tune, kept out of git |
 | `adapters.py` | one function per platform, all returning the same job dict |
