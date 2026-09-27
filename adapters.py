@@ -319,25 +319,32 @@ def radancy(cfg):
 
 
 _PAGEUP_ROW = re.compile(
-    r'<a class="job-link" href="([^"]+)">(.*?)</a>.*?<span class="location">(.*?)</span>'
-    r'(?:.*?<tr class="summary">\s*<td[^>]*>(.*?)</td>)?', re.S)
+    r'<a class="job-link" href="([^"]+)">(.*?)</a>.*?<span class="location">(.*?)</span>',
+    re.S)
 
 
 def pageup(cfg):
-    """University/CSU-style PageUp board: a plain HTML results table."""
+    """University/CSU-style PageUp board: a plain HTML results table.
+
+    The results table carries a `<tr class="summary">` cell, and using it as
+    the description is a trap: it is a one-sentence teaser, so every row
+    reached scoring truncated and unscorable. Leave the description empty
+    and let _hydrate_pageup fetch the detail page instead, the way Radancy
+    and Workday do.
+    """
     base = cfg["base"].rstrip("/")
     req = urllib.request.Request(f"{base}/cw/en-us/listing/",
                                  headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         page = r.read().decode("utf-8", "replace")
     out = []
-    for path, title, loc, summary in _PAGEUP_ROW.findall(page):
+    for path, title, loc in _PAGEUP_ROW.findall(page):
         out.append({
             "company": cfg["company"],
             "title": strip_html(title),
             "location": strip_html(loc),
             "url": base + _html.unescape(path),
-            "description": strip_html(summary or ""),
+            "description": "",  # detail page needed; hydrated lazily
             "job_id": f"pu:{cfg['company']}:{path.split('/')[4] if len(path.split('/')) > 4 else path}",
             "posted": "",
         })
@@ -563,9 +570,28 @@ def _hydrate_paradox(job):
     return strip_html(page[i:i + 40000])[:6000]
 
 
+def _hydrate_pageup(job):
+    """The detail page has no JSON-LD and no description class -- the text
+    lives in the #job-details container, which also swallows the page's
+    trailing SharePoint scripts. PageUp closes every posting with its own
+    "Advertised:" metadata line, so cut there."""
+    req = urllib.request.Request(job["url"], headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        page = r.read().decode("utf-8", "replace")
+    i = page.find('id="job-details"')
+    if i < 0:
+        return strip_html(page)[:6000]
+    i = page.find(">", i) + 1  # start after the tag, not mid-attribute
+    txt = strip_html(page[i:i + 40000])
+    cut = txt.find("Advertised:")
+    if cut > 400:
+        txt = txt[:cut]
+    return txt[:6000]
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
-              "px": _hydrate_paradox}
+              "px": _hydrate_paradox, "pu": _hydrate_pageup}
 
 
 def hydrate(job):
