@@ -18,6 +18,10 @@ __pycache__/
 /.*.json
 !/.gitignore
 
+# Working files from /jobscan-master's liveness sweep (fetched pages, per-URL
+# verdicts, the scripts that produced them). Transient and re-derivable.
+/.claude/scratch/
+
 # Editor scratch.
 *.swp
 *.swo

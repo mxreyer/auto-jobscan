@@ -152,6 +152,49 @@ tempts you into.
 
 ## Output
 
+### Section skeleton
+
+Every shortlist has the **same sections, under the same headings, in the same
+order** — so that two runs can be read side by side, and so that
+`/jobscan-master` can parse a pile of them without special-casing each one.
+Nothing else appears at `##` level:
+
+```
+# Shortlist — <date>[ (<qualifier>)]
+<header block: the stamp line, the counts, the region filter, what a score means>
+
+## Do this one first
+## Table
+## The roles scoring ≥6
+## Apply / Maybe / Skip
+## The Applies, in full
+## Skip list, grouped by reason
+## Flags
+## Config feedback
+## Sources
+```
+
+**A section that has nothing in it stays, carrying the single line "None this
+run."** A run with no Apply still has an "The Applies, in full" heading with
+that line under it. Dropping the empty ones is what made earlier runs
+unreadable against each other: absence then means either "nothing qualified"
+or "the scorer forgot", and the file cannot say which.
+
+Subsections (`###`) inside those sections are free — "The Applies, in full"
+needs one per role, "Flags" often wants one per flag.
+
+The first line of the header block is a fixed stamp, so a shortlist always
+records exactly which candidate file produced it:
+
+```
+Scored from: candidates.md · <its header date> · <N> roles · sha256 <first 12 hex of sha256>
+```
+
+`./check-shortlist.sh` checks both the stamp and the skeleton, and is the
+thing to run rather than eyeballing the headings.
+
+### The table and the write-ups
+
 A markdown table, best first, then one short paragraph per role scoring ≥6:
 
 | # | Company | Role | Loc | Score | Matched via | Key gap |
