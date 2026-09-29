@@ -84,7 +84,7 @@ loop" are all headings real runs invented; each one is a file
 nothing in it keeps its heading and says "None this run." — an empty
 Apply list is a result, and it should look the same every time it happens.
 
-Then **run `./check-shortlist.sh` again on what you wrote** and fix what it
+Then **run `./check-shortlist.sh --after` on what you wrote** and fix what it
 reports before telling the user you are done. It is mechanical; your own
 reading of your own output is not.
 

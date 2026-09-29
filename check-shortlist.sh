@@ -3,13 +3,23 @@
 # and reports whether the candidates.md it was scored from has been scored
 # before. Read-only: it checks, it never writes.
 #
-# Usage:  ./check-shortlist.sh [shortlist.md]
+# Usage:  ./check-shortlist.sh                     before scoring
+#         ./check-shortlist.sh --after [file]      after writing [file]
 #
-# /jobscan-score runs this twice: once before scoring (the duplicate check
-# fires on candidates.md alone) and once after writing the file.
+# /jobscan-score runs this twice. Before scoring, the duplicate check reads
+# EVERY shortlist, shortlist.md included -- the file most likely to already
+# hold this candidates.md's stamp is the one a previous pass just wrote.
+# After writing, the file on disk necessarily carries the current stamp, so
+# --after skips the duplicate question (it was answered before scoring) and
+# checks only the skeleton of what was written.
 set -u
 cd "$(dirname "$0")"
 
+after=0
+if [ "${1-}" = "--after" ]; then
+  after=1
+  shift
+fi
 target=${1:-shortlist.md}
 
 bold=$'\033[1m'; red=$'\033[31m'; grn=$'\033[32m'; yel=$'\033[33m'; off=$'\033[0m'
@@ -45,14 +55,15 @@ echo
 
 # --- has this candidates.md already been scored? --------------------------
 echo "${bold}Duplicate scoring${off}"
-if [ ! -f candidates.md ]; then
+if [ "$after" = 1 ]; then
+  echo "  skip --after: this was checked before scoring"
+elif [ ! -f candidates.md ]; then
   echo "  ${yel}TODO${off} candidates.md is missing -- run python3 jobscan.py first"
 else
   fp=$(fingerprint candidates.md)
   prior=""
   for f in shortlist.md shortlist-*.md; do
     [ -f "$f" ] || continue
-    [ "$f" = "$target" ] && continue
     if grep -q "sha256 $fp" "$f" 2>/dev/null; then
       prior="$prior $f"
     fi
