@@ -143,7 +143,9 @@ refuses a second scoring pass over a `candidates.md` that has already been
 scored: each shortlist stamps the `sha256` of the file it came from, so
 running `/jobscan-score` twice on one batch is caught rather than quietly
 producing two disagreeing rankings. Re-run `python3 jobscan.py` for a fresh
-batch instead.
+batch instead. Run it bare before scoring, and `./check-shortlist.sh --after`
+once the new shortlist is written — that form checks only the skeleton, since
+the file just written necessarily carries the current stamp.
 
 `shortlist.md` is overwritten every run, so keep a dated copy of any you want.
 Once several have piled up:
