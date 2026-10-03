@@ -146,12 +146,19 @@ def lever(cfg):
     out = []
     for j in d:
         cat = j.get("categories") or {}
+        # `descriptionPlain` is only the posting's intro; responsibilities and
+        # requirements live in `lists` (heading + <li> HTML). Reading the intro
+        # alone left some postings at a sentence -- unscorable. The trailing
+        # `additional` block is mostly benefits/EEO boilerplate, so it stays out.
+        parts = [strip_html(j.get("descriptionPlain") or j.get("description", ""))]
+        for sec in j.get("lists") or []:
+            parts.append(f"{sec.get('text', '')}: {strip_html(sec.get('content', ''))}")
         out.append({
             "company": cfg["company"],
             "title": j.get("text", ""),
             "location": cat.get("location", ""),
             "url": j.get("hostedUrl", ""),
-            "description": strip_html(j.get("descriptionPlain") or j.get("description", "")),
+            "description": " ".join(p for p in parts if p.strip()),
             "job_id": f"lv:{tok}:{j.get('id')}",
             "posted": str(j.get("createdAt", "")),
         })
