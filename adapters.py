@@ -219,32 +219,88 @@ def workday(cfg):
     tenant, wd, site = cfg["tenant"], cfg.get("wd", "wd1"), cfg["site"]
     host = f"https://{tenant}.{wd}.myworkdayjobs.com"
     api = f"{host}/wday/cxs/{tenant}/{site}/jobs"
+    budget = cfg.get("max", 500)
+    seen_paths = set()
     out = []
-    offset = 0
-    total = None
-    while offset < cfg.get("max", 500):
-        d = _get(api, data={"appliedFacets": {}, "limit": 20,
-                            "offset": offset, "searchText": cfg.get("q", "")},
-                 headers={"Referer": f"{host}/{site}"})
-        posts = d.get("jobPostings", [])
-        # Workday reports `total` on the first page only; later pages say 0.
-        if total is None:
-            total = d.get("total", 0)
-        for j in posts:
-            path = j.get("externalPath", "")
-            out.append({
-                "company": cfg["company"],
-                "title": j.get("title", ""),
-                "location": j.get("locationsText", ""),
-                "url": f"{host}/{site}{path}",
-                "description": "",  # detail endpoint needed; filled lazily
-                "job_id": f"wd:{tenant}:{path}",
-                "posted": j.get("postedOn", ""),
-            })
-        offset += len(posts)
-        if not posts or offset >= total:
+
+    def fetch(facets, limit_left):
+        """Page one query (optionally facet-filtered) until done; returns
+        (first-page response, rows added)."""
+        offset, total, first, added = 0, None, None, 0
+        while offset < min(limit_left, WORKDAY_CAP):
+            d = _get(api, data={"appliedFacets": facets, "limit": 20,
+                                "offset": offset, "searchText": cfg.get("q", "")},
+                     headers={"Referer": f"{host}/{site}"})
+            posts = d.get("jobPostings", [])
+            # Workday reports `total` on the first page only; later pages say 0.
+            if total is None:
+                total, first = d.get("total", 0), d
+                if not facets and total >= WORKDAY_CAP:
+                    break  # capped: the facet slices below fetch everything
+            for j in posts:
+                path = j.get("externalPath", "")
+                if path in seen_paths:
+                    continue
+                seen_paths.add(path)
+                added += 1
+                out.append({
+                    "company": cfg["company"],
+                    "title": j.get("title", ""),
+                    "location": j.get("locationsText", ""),
+                    "url": f"{host}/{site}{path}",
+                    "description": "",  # detail endpoint needed; filled lazily
+                    "job_id": f"wd:{tenant}:{path}",
+                    "posted": j.get("postedOn", ""),
+                })
+            offset += len(posts)
+            if not posts or offset >= total:
+                break
+        return first or {}, added
+
+    first, _ = fetch({}, budget)
+    if first.get("total", 0) < WORKDAY_CAP or len(out) >= budget:
+        return out
+
+    # The board is at Workday's cap: `total` reads exactly 2000 however large
+    # the board is, and pages past offset 2000 repeat an earlier page rather
+    # than continuing. The only way past it is to split the query into slices
+    # that are each under the cap -- one per value of a facet, deduped by path.
+    facet = _workday_partition_facet(first.get("facets", []))
+    if facet is None:
+        print(f"[jobscan] WARNING: {cfg['company']} is at Workday's {WORKDAY_CAP}-role "
+              f"cap and offers no facet to split it by; roles beyond it are missing")
+        return out
+    param, values = facet
+    for v in values:
+        if len(out) >= budget:
             break
+        fetch({param: [v["id"]]}, budget - len(out))
     return out
+
+
+# Workday reports `total` as at most this, and will not page beyond it.
+WORKDAY_CAP = 2000
+
+
+def _workday_partition_facet(facets):
+    """Pick a facet whose every value is under the cap, so that one query per
+    value reaches the whole board. Prefer jobFamilyGroup (a clean partition on
+    the boards seen); otherwise the qualifying facet with the smallest summed
+    count, since location-style facets overlap heavily and cost far more."""
+    usable = []
+    for f in facets:
+        vals = [v for v in f.get("values", []) if "id" in v and "count" in v]
+        if not vals or any(v["count"] >= WORKDAY_CAP for v in vals):
+            continue
+        total = sum(v["count"] for v in vals)
+        if total < WORKDAY_CAP:
+            continue  # cannot cover a capped board
+        usable.append((f.get("facetParameter") != "jobFamilyGroup", total,
+                       f.get("facetParameter"), vals))
+    if not usable:
+        return None
+    _, _, param, vals = min(usable, key=lambda u: (u[0], u[1]))
+    return param, vals
 
 
 def phenom(cfg):
