@@ -128,6 +128,16 @@
       "company": "Display Name",
       "site_id": "UUID-from-the-careers-page-script-tag",
       "_warning": "Get site_id from the careers page: <script src=https://careers-content.clearcompany.com/js/v1/career-site.js?siteId=UUID>. That tag's src may be UNQUOTED, so grep the raw HTML for `clearcompany` rather than matching src=\"...\". Locations come back as 'City ST' with no comma -- make sure regions.wanted has a bare ' st' form or every role is silently dropped."
+    },
+    "workable": {
+      "kind": "workable",
+      "group": "discovery",
+      "company": "(workable)",
+      "queries": ["a specific role phrase", "another phrase"],
+      "locations": ["a country or city, e.g. Switzerland"],
+      "pages": 2,
+      "max": 600,
+      "_warning": "A multi-employer search across every Workable employer -- strongest in Europe. Cost is one request per 20 rows: queries x locations x pages. `location` is a fuzzy match, not a filter (a country returns rows from all over it), so regions.wanted does the real filtering."
     }
   },
   "prescreen": {

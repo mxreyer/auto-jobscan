@@ -110,6 +110,7 @@ ATTRIBUTION = {
     # Aggregators, which index many employers.
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
+    "workable":        ("Workable", "https://jobs.workable.com"),
 }
 
 # Credit lines a source explicitly asks for. Himalayas' API docs request a
@@ -995,3 +996,88 @@ def himalayas(cfg):
 
 
 ADAPTERS["himalayas"] = himalayas
+
+
+# --- aggregator: Workable's cross-employer job search ----------------------
+
+def workable(cfg):
+    """jobs.workable.com -- the public job search across every employer that
+    hires through Workable. No key, full descriptions inline (~3k chars
+    median), strong in European startups and SMEs, which US-centric
+    aggregators barely index.
+
+    This is the JSON the jobs.workable.com search page itself fetches:
+
+        GET /api/v1/jobs?query=...&location=...[&pageToken=...]
+
+    Multi-employer, so mark it `"group": "discovery"`, and set `queries` and
+    `locations`: one sweep per (query, location) pair, deduped by job id.
+    Cost is one request per 20 rows; budget with `pages` and `max`.
+
+    Verified by probing, not from documentation -- there is none:
+
+    * Page size is fixed at 20. The response carries `nextPageToken`; send it
+      back as `pageToken`. The obvious alternatives (`nextPageToken`,
+      `page_token`) are silently ignored and return page one again, so a
+      wrong name looks like pagination working until you diff the ids.
+
+    * `location` is a fuzzy place match, not a filter. 'Germany' returns
+      Hamburg and Berlin as well as Munich, plus location-less rows, and
+      'Europe' works as a value. Let regions.wanted do the real filtering.
+
+    * The text is split across `description`, `requirementsSection` and
+      `benefitsSection`. Reading `description` alone drops the requirements,
+      which are what the scorer needs most.
+
+    * `workplace` is on_site | hybrid | remote. A remote role is reported as
+      "<places> (remote)" so location_ok() can apply its remote rule.
+
+    Terms, as read when this adapter was written: workable.com/terms is the employer-customer
+    agreement and has no clause on visitors or automated access;
+    jobs.workable.com/robots.txt does not disallow /api/. Keep to a daily run.
+    """
+    cap = cfg.get("max", 400)
+    queries = cfg.get("queries") or [""]
+    locations = cfg.get("locations") or [""]
+    out, seen = [], set()
+    for term in queries:
+        for loc in locations:
+            token = None
+            for _ in range(cfg.get("pages", 3)):
+                if len(out) >= cap:
+                    return out[:cap]
+                q = {k: v for k, v in (("query", term), ("location", loc)) if v}
+                if token:
+                    q["pageToken"] = token
+                d = _get_retry("https://jobs.workable.com/api/v1/jobs?"
+                               + urllib.parse.urlencode(q))
+                for j in d.get("jobs", []):
+                    jid = j.get("id")
+                    if not jid or jid in seen:
+                        continue
+                    seen.add(jid)
+                    where = "; ".join(j.get("locations") or []) or ", ".join(
+                        v for v in ((j.get("location") or {}).get(k)
+                                    for k in ("city", "subregion", "countryName")) if v)
+                    if j.get("workplace") == "remote":
+                        where = f"{where} (remote)" if where else "Remote"
+                    text = "\n\n".join(strip_html(j.get(k) or "") for k in
+                                       ("description", "requirementsSection", "benefitsSection"))
+                    out.append({
+                        # Multi-employer feed: the employer comes from the row.
+                        "company": (j.get("company") or {}).get("title") or cfg["company"],
+                        "title": j.get("title", ""),
+                        "location": where,
+                        "url": j.get("url", ""),
+                        "description": text.strip(),
+                        "job_id": f"wk:{jid}",
+                        "posted": (j.get("created") or "")[:10],
+                    })
+                token = d.get("nextPageToken")
+                if not token or not d.get("jobs"):
+                    break
+                time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["workable"] = workable

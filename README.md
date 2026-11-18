@@ -301,6 +301,12 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
   came from Himalayas, if you republish it. The generated Sources block carries
   that line automatically. Their data refreshes every 24 hours, so more than a
   daily run gains nothing and only costs them requests.
+- **[Workable](https://jobs.workable.com)** — the JSON its own job-search page
+  fetches, no key. Workable's published terms are its employer-customer
+  agreement and say nothing about visitors or automated access, and its
+  `robots.txt` does not disallow `/api/` (both checked when the adapter was
+  added). No documented
+  attribution requirement. Keep to a daily run.
 
 **If you publish your `shortlist.md` anywhere**, carry the Sources block with
 it. Locally it is a file on your disk; published, it is someone else's data

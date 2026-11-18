@@ -61,8 +61,8 @@ First-party boards — the company's own ATS, always full descriptions:
 | a Paradox.ai careersite | `paradox` | `base: https://employment.X.edu` |
 | a `careers-api.clearcompany.com` board | `clearcompany` | `site_id: <UUID>` |
 
-(That table is first-party boards. The two aggregator kinds — `themuse` and
-`himalayas` — are below.)
+(That table is first-party boards. The aggregator kinds — `themuse`,
+`himalayas` and `workable` — are below.)
 
 Aggregators — for employers whose own portal resists scripting, and for
 reaching employers you would never have thought to track:
@@ -71,8 +71,9 @@ reaching employers you would never have thought to track:
 |---|---|---|---|---|
 | `themuse` | **full** (~4k chars) | `scored` | metro + remote, all employers | no key required |
 | `himalayas` | **full** (~4.9k chars) | `scored` | **remote-only**, ~104k roles | no key required |
+| `workable` | **full** (~3k chars) | `scored` | every Workable employer; strongest in **Europe** | no key required; see the adapter docstring |
 
-The two do not overlap the way you would expect. The Muse indexes employers
+The first two do not overlap the way you would expect. The Muse indexes employers
 against offices; Himalayas is remote-only, so it reaches remote-first companies
 that have no office to be indexed against and therefore never appear on a metro
 aggregator at all. Running both is not redundancy.
