@@ -307,6 +307,14 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
   `robots.txt` does not disallow `/api/` (both checked when the adapter was
   added). No documented
   attribution requirement. Keep to a daily run.
+- **[Bundesagentur für Arbeit](https://www.arbeitsagentur.de/jobsuche)** —
+  Germany's federal job board. There is no official API: this uses the JSON
+  the agency's own Jobsuche frontends call, with the public client id they
+  share, as documented by the community
+  [bundesAPI](https://github.com/bundesAPI/jobsuche-api) project. The API host
+  publishes no `robots.txt`, and www.arbeitsagentur.de's allows all paths
+  (checked when the adapter was added). No documented attribution
+  requirement. One detail request per row that survives the prescreen.
 
 **If you publish your `shortlist.md` anywhere**, carry the Sources block with
 it. Locally it is a file on your disk; published, it is someone else's data

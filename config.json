@@ -138,6 +138,17 @@
       "pages": 2,
       "max": 600,
       "_warning": "A multi-employer search across every Workable employer -- strongest in Europe. Cost is one request per 20 rows: queries x locations x pages. `location` is a fuzzy match, not a filter (a country returns rows from all over it), so regions.wanted does the real filtering."
+    },
+    "arbeitsagentur": {
+      "kind": "arbeitsagentur",
+      "group": "discovery",
+      "company": "(arbeitsagentur)",
+      "queries": ["a German job title works best, e.g. Physiker", "another title"],
+      "locations": [{"wo": "a German city", "umkreis": 50}],
+      "days": 30,
+      "pages": 2,
+      "max": 600,
+      "_warning": "Germany's federal job board. Rows come without a description and are hydrated after the prescreen, one request each. `umkreis` is a radius in km and is not a hard filter -- regions.wanted trims. Discovery rows must also match discovery_signal, so add German title words (e.g. 'physiker') there or German postings never pass."
     }
   },
   "prescreen": {

@@ -6,6 +6,7 @@ Normalized shape:
 Stdlib only on purpose: this runs unattended from cron, so it must not
 depend on a virtualenv that can silently rot.
 """
+import base64
 import html as _html
 import http.client
 import json
@@ -111,6 +112,7 @@ ATTRIBUTION = {
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
     "workable":        ("Workable", "https://jobs.workable.com"),
+    "arbeitsagentur":  ("Bundesagentur für Arbeit", "https://www.arbeitsagentur.de/jobsuche"),
 }
 
 # Credit lines a source explicitly asks for. Himalayas' API docs request a
@@ -653,9 +655,26 @@ def _hydrate_pageup(job):
     return txt[:6000]
 
 
+def _hydrate_arbeitsagentur(job):
+    """The Bundesagentur detail call carries the full text, including for
+    postings syndicated from partner boards (`externeURL` set). Its id is the
+    reference number, standard base64, URL-encoded. The salary band, when
+    given, is prepended -- German postings rarely state one in the text."""
+    ref = job["job_id"].split(":", 1)[1]
+    code = urllib.parse.quote(base64.b64encode(ref.encode()).decode(), safe="")
+    d = _get_retry(f"{_BA}/pc/v4/jobdetails/{code}", headers=_BA_HEADERS)
+    text = strip_html(d.get("stellenangebotsBeschreibung") or "")
+    lo, hi = d.get("gehaltsspanneVon"), d.get("gehaltsspanneBis")
+    if lo or hi:
+        band = "–".join(f"{int(v):,}" for v in (lo, hi) if v)
+        text = f"Salary band: EUR {band} ({d.get('verguetungsangabe', '').lower()})\n\n{text}"
+    return text
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
-              "px": _hydrate_paradox, "pu": _hydrate_pageup}
+              "px": _hydrate_paradox, "pu": _hydrate_pageup,
+              "ba": _hydrate_arbeitsagentur}
 
 
 def hydrate(job):
@@ -1081,3 +1100,96 @@ def workable(cfg):
 
 
 ADAPTERS["workable"] = workable
+
+
+# --- aggregator: Germany's federal job board -------------------------------
+
+_BA = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+# A public client id shared by the Bundesagentur's own web and app frontends,
+# not a personal credential. Documented by the community bundesAPI project
+# (github.com/bundesAPI/jobsuche-api); there is no official API.
+_BA_HEADERS = {"X-API-Key": "jobboerse-jobsuche"}
+
+
+def _ba_place(loc):
+    a = loc.get("adresse") or {}
+    # Regions arrive upper-case with underscores (BAYERN, BADEN_WUERTTEMBERG);
+    # write them the way regions.wanted is written.
+    parts = [a.get("ort"), (a.get("region") or "").replace("_", "-").title(),
+             (a.get("land") or "").title()]
+    return ", ".join(p for p in parts if p)
+
+
+def arbeitsagentur(cfg):
+    """Bundesagentur fuer Arbeit Jobsuche -- every posting registered with
+    Germany's federal employment agency, ~800k, including many syndicated
+    from partner boards. No signup; see _BA_HEADERS.
+
+    The search returns NO description, so rows are hydrated after the
+    prescreen (see _hydrate_arbeitsagentur), like Workday. Multi-employer:
+    mark it `"group": "discovery"`.
+
+    Config:
+      queries     free-text `was` terms -- German titles work best
+                  ("Physiker", "Data Scientist", "Softwareentwickler C++")
+      locations   `wo` places, each a string or {"wo": ..., "umkreis": km};
+                  `umkreis` (default 50) is a radius around the place
+      days        `veroeffentlichtseit`, 0-100 (default 30)
+      size        page size (default 50); `pages` per (query, place)
+      zeitarbeit  include temp-agency postings (default false -- they
+                  duplicate the employers' own ads many times over)
+
+    Verified by probing, not from documentation:
+
+    * Use /pc/v6/jobs. Its rows (`ergebnisliste`) are shaped differently from
+      the /pc/v4 rows the community spec describes: `stellenangebotsTitel`,
+      `firma`, `referenznummer`, and a `stellenlokationen` list of addresses.
+      The v4 detail call (/pc/v4/jobdetails/<base64 refnr>) still works.
+
+    * `umkreis` is not a hard filter: results are distance-ranked, and the
+      facets list postcodes far outside the radius. regions.wanted trims.
+
+    * `page` is 1-based; `maxErgebnisse` is the total for the query.
+    """
+    days = cfg.get("days", 30)
+    size = cfg.get("size", 50)
+    cap = cfg.get("max", 600)
+    out, seen = [], set()
+    for term in cfg.get("queries") or [""]:
+        for place in cfg.get("locations") or [""]:
+            if isinstance(place, str):
+                place = {"wo": place}
+            for page in range(1, cfg.get("pages", 2) + 1):
+                if len(out) >= cap:
+                    return out[:cap]
+                q = {"was": term, "wo": place.get("wo", ""),
+                     "umkreis": place.get("umkreis", 50), "angebotsart": 1,
+                     "veroeffentlichtseit": days, "page": page, "size": size,
+                     "zeitarbeit": str(bool(cfg.get("zeitarbeit", False))).lower()}
+                q = {k: v for k, v in q.items() if v != ""}
+                d = _get_retry(f"{_BA}/pc/v6/jobs?" + urllib.parse.urlencode(q),
+                               headers=_BA_HEADERS)
+                rows = d.get("ergebnisliste") or []
+                for j in rows:
+                    ref = j.get("referenznummer")
+                    if not ref or ref in seen:
+                        continue
+                    seen.add(ref)
+                    out.append({
+                        "company": (j.get("firma") or cfg["company"]).strip(),
+                        "title": j.get("stellenangebotsTitel", ""),
+                        "location": "; ".join(_ba_place(l) for l in j.get("stellenlokationen") or []),
+                        "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref}",
+                        "description": "",   # hydrated after the prescreen
+                        "job_id": f"ba:{ref}",
+                        "posted": ((j.get("veroeffentlichungszeitraum") or {}).get("von")
+                                   or j.get("datumErsteVeroeffentlichung") or ""),
+                    })
+                total = int(d.get("maxErgebnisse") or 0)
+                if len(rows) < size or page * size >= total:
+                    break
+                time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["arbeitsagentur"] = arbeitsagentur
