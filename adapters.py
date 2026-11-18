@@ -712,7 +712,13 @@ def themuse(cfg):
                 break
             except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
                 code = getattr(e, "code", None)
+                # Past the last page this is the normal end of the results.
+                # On the FIRST page it means the endpoint itself is gone or
+                # the query is malformed -- raise, so --check reports a
+                # failure instead of an `ok` with zero rows.
                 if code in (400, 404):
+                    if page == 0:
+                        raise
                     return out
                 if attempt == 2:
                     raise
@@ -819,7 +825,7 @@ ADAPTERS["clearcompany"] = clearcompany
 _HIMALAYAS_US = {"united states", "usa", "u.s.", "us"}
 
 
-def _himalayas_location(restrictions):
+def _himalayas_location(restrictions, home=_HIMALAYAS_US):
     """Map Himalayas' country-level `locationRestrictions` onto a string that
     location_ok() can actually read.
 
@@ -831,11 +837,15 @@ def _himalayas_location(restrictions):
       ["United States", ...]    -> "Remote, United States"  (other countries dropped)
       ["Germany", "France"]     -> "Remote, Germany, France"
 
-    Dropping the co-listed countries when the US is present matters: a role
-    open to both the US and Canada would otherwise contain "canada", trip the
-    FOREIGN check in location_ok(), and be dropped -- even though a US-based
-    applicant is eligible. The foreign-only case keeps every country so that
-    the filter can reject it for the right reason.
+    `home` is the set of lower-cased country names the applicant can work
+    from -- the US by default, or the source's `home_countries` in config.
+    Dropping the co-listed countries when a home country is present matters:
+    a role open to both the US and Canada would otherwise contain "canada",
+    trip the FOREIGN check in location_ok(), and be dropped -- even though a
+    US-based applicant is eligible. Only the home countries are kept, so a
+    search based outside the US gets the same treatment ("Remote, Germany"
+    for a role open to the US, Germany and the UK). The no-home case keeps
+    every country so that the filter can reject it for the right reason.
 
     Passing the raw field through would drop EVERYTHING: bare "United States"
     matches no WANTED token, so it falls through to the final rule and is
@@ -844,8 +854,9 @@ def _himalayas_location(restrictions):
     countries = [c.strip() for c in (restrictions or []) if c and c.strip()]
     if not countries:
         return "Remote"
-    if any(c.lower() in _HIMALAYAS_US for c in countries):
-        return "Remote, United States"
+    mine = [c for c in countries if c.lower() in home]
+    if mine:
+        return "Remote, " + ", ".join(mine)
     return "Remote, " + ", ".join(countries)
 
 
@@ -913,6 +924,8 @@ def himalayas(cfg):
     """
     cap = cfg.get("max", 400)
     queries = cfg.get("queries") or []
+    home = ({c.strip().lower() for c in cfg["home_countries"]}
+            if cfg.get("home_countries") else _HIMALAYAS_US)
     out, seen = [], set()
 
     def collect(rows):
@@ -933,7 +946,7 @@ def himalayas(cfg):
                 # dedupe and the per-company round-robin.
                 "company": r.get("companyName") or cfg["company"],
                 "title": r.get("title", ""),
-                "location": _himalayas_location(r.get("locationRestrictions")),
+                "location": _himalayas_location(r.get("locationRestrictions"), home),
                 "url": r.get("applicationLink") or jid,
                 "description": strip_html(r.get("description", "")),
                 "job_id": f"hi:{jid}",
