@@ -286,6 +286,8 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
 [PageUp](https://www.pageuppeople.com), [Eightfold](https://eightfold.ai),
 [Paradox](https://www.paradox.ai), [ClearCompany](https://www.clearcompany.com),
 [JOIN](https://join.com), [SAP SuccessFactors](https://www.sap.com/products/hcm.html),
+[Refline](https://www.refline.ch) (its public `/<account>/search.html` lists
+and job pages, which `robots.txt` allows),
 and one employer portal, [ETH Zurich](https://jobs.ethz.ch) (robots.txt allows all).
 JOIN and SuccessFactors are read from their public HTML pages (JOIN's server-rendered
 page data; SuccessFactors' `/search/` and `/job/` pages), which their

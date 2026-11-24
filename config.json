@@ -134,6 +134,13 @@
       "company": "Display Name",
       "slug": "path-segment-from-join.com/companies/<slug>"
     },
+    "refline": {
+      "kind": "refline",
+      "company": "Display Name",
+      "account": "numeric id from apply.refline.ch/<account>/search.html",
+      "location_suffix": "Country -- optional; workplaces are bare town names, sometimes absent",
+      "_warning": "Refline (Swiss ATS). ?all=1 lists every role on one page; descriptions come from each job page's JSON-LD JobPosting. Take the account number from the employer's careers-page links -- do not guess it."
+    },
     "ethz": {
       "kind": "ethz",
       "company": "ETH Zurich",

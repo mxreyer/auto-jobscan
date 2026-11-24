@@ -111,6 +111,7 @@ ATTRIBUTION = {
     "join":            ("JOIN", "https://join.com"),
     "successfactors":  ("SAP SuccessFactors", "https://www.sap.com/products/hcm.html"),
     "ethz":            ("ETH Zurich job portal", "https://jobs.ethz.ch"),
+    "refline":         ("Refline", "https://www.refline.ch"),
     # Aggregators, which index many employers.
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
@@ -676,7 +677,8 @@ def _hydrate_arbeitsagentur(job):
 
 def _fetch_html(url, tries=4, base_wait=2):
     """GET an HTML page, retrying transient failures the way _get_retry does:
-    truncated chunked bodies (IncompleteRead), timeouts, 429 and 5xx."""
+    truncated chunked bodies (IncompleteRead), dropped connections
+    (RemoteDisconnected and other resets), timeouts, 429 and 5xx."""
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -688,7 +690,9 @@ def _fetch_html(url, tries=4, base_wait=2):
         except urllib.error.HTTPError as e:
             if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
                 raise
-        except (urllib.error.URLError, TimeoutError, http.client.IncompleteRead):
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                http.client.HTTPException):
+            # HTTPException covers IncompleteRead and RemoteDisconnected.
             if attempt == tries - 1:
                 raise
         time.sleep(base_wait * (attempt + 1))
@@ -738,11 +742,27 @@ def _hydrate_ethz(job):
     return strip_html(_element_inner(_fetch_html(job["url"]), 'class="description"', "div"))
 
 
+def _hydrate_refline(job):
+    """Refline job pages embed a JSON-LD JobPosting whose `description` is
+    the full posting; fall back to the page text if it is missing."""
+    page = _fetch_html(job["url"])
+    for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', page, re.S):
+        try:
+            data = json.loads(block, strict=False)
+        except ValueError:
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("description"):
+                return strip_html(item["description"])
+    return strip_html(re.sub(r"(?s)<(script|style)[^>]*>.*?</\1>", " ", page))[:6000]
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
               "px": _hydrate_paradox, "pu": _hydrate_pageup,
               "ba": _hydrate_arbeitsagentur, "jn": _hydrate_join,
-              "sf": _hydrate_successfactors, "ez": _hydrate_ethz}
+              "sf": _hydrate_successfactors, "ez": _hydrate_ethz,
+              "rf": _hydrate_refline}
 
 
 def hydrate(job):
@@ -1428,3 +1448,63 @@ def ethz(cfg):
 
 
 ADAPTERS["ethz"] = ethz
+
+
+# --- first-party: Refline (Swiss ATS) ---------------------------------------
+
+def refline(cfg):
+    """Refline -- a Swiss ATS used by many Swiss employers and public
+    institutions. Each employer has a numeric account on apply.refline.ch:
+
+        https://apply.refline.ch/<account>/search.html
+
+    Find `account` in the employer's careers-page links; do not guess it.
+
+    `?all=1` lists every open position on one page, as a table whose cells
+    carry fixed classes: position (link + title), workload, workplace,
+    published (dd.mm.yyyy). Postings live at
+    /<account>/<job>/pub/<n>/index.html, and each embeds a JSON-LD
+    JobPosting with the full description (_hydrate_refline) -- more robust
+    than the employer-specific page templates around it. robots.txt allows
+    the /<account>/ paths.
+
+    `workplace` is usually a bare town ("Dübendorf"), and some accounts'
+    tables omit the column entirely. Set `location_suffix` (e.g. the
+    country) if your region list does not name every town; it is appended
+    to a town, or used on its own when the workplace is missing.
+    """
+    acct = str(cfg["account"])
+    base = f"https://apply.refline.ch/{acct}"
+    suffix = cfg.get("location_suffix")
+    html = _fetch_html(f"{base}/search.html?all=1&lang={cfg.get('lang', 'en')}")
+    out, seen = [], set()
+    for row in re.findall(r"<tr>(.*?)</tr>", html, re.S):
+        m = re.search(r'class="position"[^>]*>\s*<a href="([^"]+)"[^>]*>(.*?)</a>', row, re.S)
+        if not m or m.group(1) in seen:
+            continue
+        seen.add(m.group(1))
+
+        def cell(cls):
+            c = re.search(rf'class="{cls}"[^>]*>(.*?)</td>', row, re.S)
+            return _html.unescape(re.sub(r"<[^>]+>|\s+", " ", c.group(1)).strip()) if c else ""
+
+        # Some accounts' tables have no workplace column at all; the suffix
+        # then stands in as the whole location rather than leaving it empty.
+        where = cell("workplace")
+        if suffix and suffix.lower() not in where.lower():
+            where = f"{where}, {suffix}" if where else suffix
+        d = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", cell("published"))
+        jid = re.search(rf"/{acct}/(\d+)/", m.group(1))
+        out.append({
+            "company": cfg["company"],
+            "title": _html.unescape(re.sub(r"\s+", " ", m.group(2)).strip()),
+            "location": where,
+            "url": m.group(1),
+            "description": "",   # hydrated after the prescreen
+            "job_id": f"rf:{acct}:{jid.group(1) if jid else m.group(1)}",
+            "posted": f"{d.group(3)}-{d.group(2)}-{d.group(1)}" if d else "",
+        })
+    return out
+
+
+ADAPTERS["refline"] = refline

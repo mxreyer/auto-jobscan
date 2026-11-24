@@ -62,6 +62,7 @@ First-party boards — the company's own ATS, always full descriptions:
 | a `careers-api.clearcompany.com` board | `clearcompany` | `site_id: <UUID>` |
 | `join.com/companies/X` | `join` | `slug: X` |
 | `jobs.ethz.ch` (ETH Zurich's own portal) | `ethz` | none required |
+| `apply.refline.ch/N/search.html` | `refline` | `account: N`, optional `location_suffix` |
 | a SuccessFactors Career Site Builder site (`/search/?q=…&startrow=N`, postings at `/job/<Loc-Title>/<id>/`) | `successfactors` | `base: https://careers.X.org`, optional `location_suffix` |
 
 (That table is first-party boards. The aggregator kinds — `themuse`,
@@ -89,7 +90,7 @@ the company has none.
 
 Unsure which platform? Fingerprint the careers page:
 
-    curl -sL <careers-url> | grep -ioE 'myworkdayjobs|greenhouse|lever|ashby|icims|eightfold|avature|talentbrew|pageuppeople|brassring|paradox|smartrecruiters|successfactors|phenom|clearcompany|jobvite|workable|breezy|bamboohr|recruitee|teamtailor|jazzhr|dayforce|ultipro|taleo|applytojob|join\.com|sapsf|careersitebuilder'
+    curl -sL <careers-url> | grep -ioE 'myworkdayjobs|greenhouse|lever|ashby|icims|eightfold|avature|talentbrew|pageuppeople|brassring|paradox|smartrecruiters|successfactors|phenom|clearcompany|jobvite|workable|breezy|bamboohr|recruitee|teamtailor|jazzhr|dayforce|ultipro|taleo|applytojob|join\.com|sapsf|careersitebuilder|refline'
 
 Then `python3 jobscan.py --check` to confirm it answers.
 
