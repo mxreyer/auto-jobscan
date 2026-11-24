@@ -129,6 +129,18 @@
       "site_id": "UUID-from-the-careers-page-script-tag",
       "_warning": "Get site_id from the careers page: <script src=https://careers-content.clearcompany.com/js/v1/career-site.js?siteId=UUID>. That tag's src may be UNQUOTED, so grep the raw HTML for `clearcompany` rather than matching src=\"...\". Locations come back as 'City ST' with no comma -- make sure regions.wanted has a bare ' st' form or every role is silently dropped."
     },
+    "join": {
+      "kind": "join",
+      "company": "Display Name",
+      "slug": "path-segment-from-join.com/companies/<slug>"
+    },
+    "successfactors": {
+      "kind": "successfactors",
+      "company": "Display Name",
+      "base": "https://careers.example.org",
+      "location_suffix": "Country -- optional; rows often name only a city",
+      "_warning": "SAP SuccessFactors Career Site Builder. Read from the /search/ pages (25 rows each) and hydrated from /job/ pages; the RSS feed under /services/ is usually disallowed by robots.txt. Rows carry no posting date."
+    },
     "workable": {
       "kind": "workable",
       "group": "discovery",

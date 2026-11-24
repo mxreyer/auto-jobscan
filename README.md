@@ -284,7 +284,12 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
 [Workday](https://www.workday.com), [Phenom](https://www.phenom.com),
 [Radancy/TalentBrew](https://www.radancy.com),
 [PageUp](https://www.pageuppeople.com), [Eightfold](https://eightfold.ai),
-[Paradox](https://www.paradox.ai), [ClearCompany](https://www.clearcompany.com).
+[Paradox](https://www.paradox.ai), [ClearCompany](https://www.clearcompany.com),
+[JOIN](https://join.com), [SAP SuccessFactors](https://www.sap.com/products/hcm.html).
+The last two are read from their public HTML pages (JOIN's server-rendered
+page data; SuccessFactors' `/search/` and `/job/` pages), which their
+`robots.txt` files allow; SuccessFactors sites typically disallow the
+`/services/` path their RSS feed lives under, so it is not used.
 
 **Aggregators**, which index many employers at once:
 

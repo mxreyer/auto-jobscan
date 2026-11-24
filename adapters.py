@@ -108,6 +108,8 @@ ATTRIBUTION = {
     "eightfold":       ("Eightfold", "https://eightfold.ai"),
     "paradox":         ("Paradox", "https://www.paradox.ai"),
     "clearcompany":    ("ClearCompany", "https://www.clearcompany.com"),
+    "join":            ("JOIN", "https://join.com"),
+    "successfactors":  ("SAP SuccessFactors", "https://www.sap.com/products/hcm.html"),
     # Aggregators, which index many employers.
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
@@ -671,10 +673,70 @@ def _hydrate_arbeitsagentur(job):
     return text
 
 
+def _fetch_html(url, tries=4, base_wait=2):
+    """GET an HTML page, retrying transient failures the way _get_retry does:
+    truncated chunked bodies (IncompleteRead), timeouts, 429 and 5xx."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    })
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, http.client.IncompleteRead):
+            if attempt == tries - 1:
+                raise
+        time.sleep(base_wait * (attempt + 1))
+
+
+def _next_data(html):
+    """The JSON a Next.js page server-renders into <script id="__NEXT_DATA__">."""
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+    return json.loads(m.group(1)) if m else {}
+
+
+def _element_inner(html, start, tag):
+    """Inner HTML of the <tag> element whose opening tag contains `start`,
+    tracking nesting depth -- descriptions nest the same tag inside
+    themselves, so the first closing tag is not the end."""
+    i = html.find(start)
+    if i < 0:
+        return ""
+    i = html.find(">", i) + 1
+    depth, pos = 1, i
+    tag_re = re.compile(rf"<(/?){tag}\b[^>]*>", re.I)
+    while depth:
+        m = tag_re.search(html, pos)
+        if not m:
+            return html[i:]
+        depth += -1 if m.group(1) else 1
+        pos = m.end()
+    return html[i:m.start()]
+
+
+def _hydrate_join(job):
+    """A JOIN job page server-renders its full HTML description in
+    __NEXT_DATA__ at props.pageProps.pageData.job.description."""
+    page = _next_data(_fetch_html(job["url"]))
+    j = (((page.get("props") or {}).get("pageProps") or {}).get("pageData") or {}).get("job") or {}
+    return strip_html(j.get("description") or "")
+
+
+def _hydrate_successfactors(job):
+    """Career Site Builder detail pages hold the posting in
+    <span class="jobdescription">, which nests further spans."""
+    return strip_html(_element_inner(_fetch_html(job["url"]), 'class="jobdescription"', "span"))
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
               "px": _hydrate_paradox, "pu": _hydrate_pageup,
-              "ba": _hydrate_arbeitsagentur}
+              "ba": _hydrate_arbeitsagentur, "jn": _hydrate_join,
+              "sf": _hydrate_successfactors}
 
 
 def hydrate(job):
@@ -1193,3 +1255,116 @@ def arbeitsagentur(cfg):
 
 
 ADAPTERS["arbeitsagentur"] = arbeitsagentur
+
+
+# --- first-party: JOIN company pages ---------------------------------------
+
+def join(cfg):
+    """JOIN (join.com) -- a free ATS common with Swiss, German and Austrian
+    start-ups and SMEs. One company page per employer:
+
+        https://join.com/companies/<slug>
+
+    `slug` is the path segment of that URL (e.g. `examplecom` -- often the
+    domain with the dot dropped; take it from the real page, do not guess).
+
+    There is no JSON API to call. The company page is a Next.js page that
+    server-renders its job list into __NEXT_DATA__
+    (props.pageProps.pageData.jobs: `items` plus `pagination` with
+    `pageCount`); `?page=N` selects further pages. Rows carry no description,
+    so each surviving row is hydrated from its own job page
+    (_hydrate_join). robots.txt allows /companies/.
+    """
+    slug = cfg["slug"]
+    base = f"https://join.com/companies/{slug}"
+    out, seen, page = [], set(), 1
+    while page <= cfg.get("pages", 10):
+        data = _next_data(_fetch_html(base + (f"?page={page}" if page > 1 else "")))
+        jobs = ((((data.get("props") or {}).get("pageProps") or {})
+                 .get("pageData") or {}).get("jobs") or {})
+        items = jobs.get("items") or []
+        new = [j for j in items if j.get("id") not in seen]
+        for j in new:
+            seen.add(j.get("id"))
+            city = (j.get("city") or {})
+            where = ", ".join(x for x in (city.get("cityName"), city.get("countryName")) if x)
+            if j.get("workplaceType") == "REMOTE" or j.get("remoteType"):
+                where = f"{where} (remote)" if where else "Remote"
+            out.append({
+                "company": cfg["company"],
+                "title": j.get("title", ""),
+                "location": where,
+                "url": f"{base}/{j.get('idParam')}",
+                "description": "",   # hydrated after the prescreen
+                "job_id": f"jn:{slug}:{j.get('id')}",
+                "posted": (j.get("createdAt") or "")[:10],
+            })
+        count = ((jobs.get("pagination") or {}).get("pageCount")) or 1
+        if not new or page >= count:
+            break
+        page += 1
+        time.sleep(0.5)
+    return out
+
+
+ADAPTERS["join"] = join
+
+
+# --- first-party: SAP SuccessFactors Career Site Builder -------------------
+
+def successfactors(cfg):
+    """SAP SuccessFactors "Career Site Builder" sites -- the careers.<org>
+    pages whose results URL looks like /search/?q=...&startrow=N and whose
+    postings live at /job/<Location-Title>/<id>/.
+
+    Config: `base` (e.g. https://careers.example.org), optional `q` (search
+    text), `location_suffix` (appended to each row's location -- rows often
+    give only a bare city name, which a region list may not match on its
+    own), `max`.
+
+    Read from the HTML search pages, 25 rows each, paged with `startrow`
+    until the "Results 1 – 25 of N" total. The RSS feed these sites offer
+    sits under /services/, which their robots.txt typically disallows --
+    /search/ and /job/ are allowed, so use those. Descriptions are hydrated
+    from the job page (_hydrate_successfactors).
+    """
+    base = cfg["base"].rstrip("/")
+    host = urllib.parse.urlparse(base).netloc
+    cap, suffix = cfg.get("max", 600), cfg.get("location_suffix")
+    out, seen, start, total = [], set(), 0, None
+    while len(out) < cap:
+        q = urllib.parse.urlencode({"q": cfg.get("q", ""), "sortColumn": "referencedate",
+                                    "sortDirection": "desc", "startrow": start})
+        html = _fetch_html(f"{base}/search/?{q}")
+        if total is None:
+            m = re.search(r'paginationLabel"[^>]*>.*?<b>\s*(\d+)\s*</b>\s*</span>', html, re.S)
+            nums = re.findall(r"<b>(\d+)</b>", m.group(0)) if m else []
+            total = int(nums[-1]) if nums else 0
+        rows = html.split('class="data-row')[1:]
+        for row in rows:
+            m = re.search(r'href="(/job/[^"]+/(\d+)/)"[^>]*>([^<]+)</a>', row)
+            if not m or m.group(2) in seen:
+                continue
+            seen.add(m.group(2))
+            loc = re.search(r'class="jobShifttype[^"]*"[^>]*>\s*([^<]*)<', row)
+            loc = _html.unescape(loc.group(1).strip()) if loc else ""
+            if suffix and loc and suffix.lower() not in loc.lower():
+                loc = f"{loc}, {suffix}"
+            date = re.search(r'class="jobDate[^"]*"[^>]*>\s*([^<]+)<', row)
+            out.append({
+                "company": cfg["company"],
+                "title": _html.unescape(m.group(3).strip()),
+                "location": loc,
+                "url": base + m.group(1),
+                "description": "",   # hydrated after the prescreen
+                "job_id": f"sf:{host}:{m.group(2)}",
+                "posted": date.group(1).strip() if date else "",
+            })
+        start += 25
+        if not rows or start >= total:
+            break
+        time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["successfactors"] = successfactors
