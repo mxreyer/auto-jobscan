@@ -284,7 +284,15 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
 [Workday](https://www.workday.com), [Phenom](https://www.phenom.com),
 [Radancy/TalentBrew](https://www.radancy.com),
 [PageUp](https://www.pageuppeople.com), [Eightfold](https://eightfold.ai),
-[Paradox](https://www.paradox.ai), [ClearCompany](https://www.clearcompany.com).
+[Paradox](https://www.paradox.ai), [ClearCompany](https://www.clearcompany.com),
+[JOIN](https://join.com), [SAP SuccessFactors](https://www.sap.com/products/hcm.html),
+[Refline](https://www.refline.ch) (its public `/<account>/search.html` lists
+and job pages, which `robots.txt` allows),
+and one employer portal, [ETH Zurich](https://jobs.ethz.ch) (robots.txt allows all).
+JOIN and SuccessFactors are read from their public HTML pages (JOIN's server-rendered
+page data; SuccessFactors' `/search/` and `/job/` pages), which their
+`robots.txt` files allow; SuccessFactors sites typically disallow the
+`/services/` path their RSS feed lives under, so it is not used.
 
 **Aggregators**, which index many employers at once:
 
@@ -301,6 +309,20 @@ platform is the pipe: [Greenhouse](https://www.greenhouse.io),
   came from Himalayas, if you republish it. The generated Sources block carries
   that line automatically. Their data refreshes every 24 hours, so more than a
   daily run gains nothing and only costs them requests.
+- **[Workable](https://jobs.workable.com)** — the JSON its own job-search page
+  fetches, no key. Workable's published terms are its employer-customer
+  agreement and say nothing about visitors or automated access, and its
+  `robots.txt` does not disallow `/api/` (both checked when the adapter was
+  added). No documented
+  attribution requirement. Keep to a daily run.
+- **[Bundesagentur für Arbeit](https://www.arbeitsagentur.de/jobsuche)** —
+  Germany's federal job board. There is no official API: this uses the JSON
+  the agency's own Jobsuche frontends call, with the public client id they
+  share, as documented by the community
+  [bundesAPI](https://github.com/bundesAPI/jobsuche-api) project. The API host
+  publishes no `robots.txt`, and www.arbeitsagentur.de's allows all paths
+  (checked when the adapter was added). No documented attribution
+  requirement. One detail request per row that survives the prescreen.
 
 **If you publish your `shortlist.md` anywhere**, carry the Sources block with
 it. Locally it is a file on your disk; published, it is someone else's data

@@ -6,6 +6,7 @@ Normalized shape:
 Stdlib only on purpose: this runs unattended from cron, so it must not
 depend on a virtualenv that can silently rot.
 """
+import base64
 import html as _html
 import http.client
 import json
@@ -107,9 +108,15 @@ ATTRIBUTION = {
     "eightfold":       ("Eightfold", "https://eightfold.ai"),
     "paradox":         ("Paradox", "https://www.paradox.ai"),
     "clearcompany":    ("ClearCompany", "https://www.clearcompany.com"),
+    "join":            ("JOIN", "https://join.com"),
+    "successfactors":  ("SAP SuccessFactors", "https://www.sap.com/products/hcm.html"),
+    "ethz":            ("ETH Zurich job portal", "https://jobs.ethz.ch"),
+    "refline":         ("Refline", "https://www.refline.ch"),
     # Aggregators, which index many employers.
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
+    "workable":        ("Workable", "https://jobs.workable.com"),
+    "arbeitsagentur":  ("Bundesagentur für Arbeit", "https://www.arbeitsagentur.de/jobsuche"),
 }
 
 # Credit lines a source explicitly asks for. Himalayas' API docs request a
@@ -652,9 +659,110 @@ def _hydrate_pageup(job):
     return txt[:6000]
 
 
+def _hydrate_arbeitsagentur(job):
+    """The Bundesagentur detail call carries the full text, including for
+    postings syndicated from partner boards (`externeURL` set). Its id is the
+    reference number, standard base64, URL-encoded. The salary band, when
+    given, is prepended -- German postings rarely state one in the text."""
+    ref = job["job_id"].split(":", 1)[1]
+    code = urllib.parse.quote(base64.b64encode(ref.encode()).decode(), safe="")
+    d = _get_retry(f"{_BA}/pc/v4/jobdetails/{code}", headers=_BA_HEADERS)
+    text = strip_html(d.get("stellenangebotsBeschreibung") or "")
+    lo, hi = d.get("gehaltsspanneVon"), d.get("gehaltsspanneBis")
+    if lo or hi:
+        band = "–".join(f"{int(v):,}" for v in (lo, hi) if v)
+        text = f"Salary band: EUR {band} ({d.get('verguetungsangabe', '').lower()})\n\n{text}"
+    return text
+
+
+def _fetch_html(url, tries=4, base_wait=2):
+    """GET an HTML page, retrying transient failures the way _get_retry does:
+    truncated chunked bodies (IncompleteRead), dropped connections
+    (RemoteDisconnected and other resets), timeouts, 429 and 5xx."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    })
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                http.client.HTTPException):
+            # HTTPException covers IncompleteRead and RemoteDisconnected.
+            if attempt == tries - 1:
+                raise
+        time.sleep(base_wait * (attempt + 1))
+
+
+def _next_data(html):
+    """The JSON a Next.js page server-renders into <script id="__NEXT_DATA__">."""
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+    return json.loads(m.group(1)) if m else {}
+
+
+def _element_inner(html, start, tag):
+    """Inner HTML of the <tag> element whose opening tag contains `start`,
+    tracking nesting depth -- descriptions nest the same tag inside
+    themselves, so the first closing tag is not the end."""
+    i = html.find(start)
+    if i < 0:
+        return ""
+    i = html.find(">", i) + 1
+    depth, pos = 1, i
+    tag_re = re.compile(rf"<(/?){tag}\b[^>]*>", re.I)
+    while depth:
+        m = tag_re.search(html, pos)
+        if not m:
+            return html[i:]
+        depth += -1 if m.group(1) else 1
+        pos = m.end()
+    return html[i:m.start()]
+
+
+def _hydrate_join(job):
+    """A JOIN job page server-renders its full HTML description in
+    __NEXT_DATA__ at props.pageProps.pageData.job.description."""
+    page = _next_data(_fetch_html(job["url"]))
+    j = (((page.get("props") or {}).get("pageProps") or {}).get("pageData") or {}).get("job") or {}
+    return strip_html(j.get("description") or "")
+
+
+def _hydrate_successfactors(job):
+    """Career Site Builder detail pages hold the posting in
+    <span class="jobdescription">, which nests further spans."""
+    return strip_html(_element_inner(_fetch_html(job["url"]), 'class="jobdescription"', "span"))
+
+
+def _hydrate_ethz(job):
+    """jobs.ethz.ch detail pages keep the posting in <div class="description">."""
+    return strip_html(_element_inner(_fetch_html(job["url"]), 'class="description"', "div"))
+
+
+def _hydrate_refline(job):
+    """Refline job pages embed a JSON-LD JobPosting whose `description` is
+    the full posting; fall back to the page text if it is missing."""
+    page = _fetch_html(job["url"])
+    for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', page, re.S):
+        try:
+            data = json.loads(block, strict=False)
+        except ValueError:
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("description"):
+                return strip_html(item["description"])
+    return strip_html(re.sub(r"(?s)<(script|style)[^>]*>.*?</\1>", " ", page))[:6000]
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
-              "px": _hydrate_paradox, "pu": _hydrate_pageup}
+              "px": _hydrate_paradox, "pu": _hydrate_pageup,
+              "ba": _hydrate_arbeitsagentur, "jn": _hydrate_join,
+              "sf": _hydrate_successfactors, "ez": _hydrate_ethz,
+              "rf": _hydrate_refline}
 
 
 def hydrate(job):
@@ -995,3 +1103,408 @@ def himalayas(cfg):
 
 
 ADAPTERS["himalayas"] = himalayas
+
+
+# --- aggregator: Workable's cross-employer job search ----------------------
+
+def workable(cfg):
+    """jobs.workable.com -- the public job search across every employer that
+    hires through Workable. No key, full descriptions inline (~3k chars
+    median), strong in European startups and SMEs, which US-centric
+    aggregators barely index.
+
+    This is the JSON the jobs.workable.com search page itself fetches:
+
+        GET /api/v1/jobs?query=...&location=...[&pageToken=...]
+
+    Multi-employer, so mark it `"group": "discovery"`, and set `queries` and
+    `locations`: one sweep per (query, location) pair, deduped by job id.
+    Cost is one request per 20 rows; budget with `pages` and `max`.
+
+    Verified by probing, not from documentation -- there is none:
+
+    * Page size is fixed at 20. The response carries `nextPageToken`; send it
+      back as `pageToken`. The obvious alternatives (`nextPageToken`,
+      `page_token`) are silently ignored and return page one again, so a
+      wrong name looks like pagination working until you diff the ids.
+
+    * `location` is a fuzzy place match, not a filter. 'Germany' returns
+      Hamburg and Berlin as well as Munich, plus location-less rows, and
+      'Europe' works as a value. Let regions.wanted do the real filtering.
+
+    * The text is split across `description`, `requirementsSection` and
+      `benefitsSection`. Reading `description` alone drops the requirements,
+      which are what the scorer needs most.
+
+    * `workplace` is on_site | hybrid | remote. A remote role is reported as
+      "<places> (remote)" so location_ok() can apply its remote rule.
+
+    Terms, as read when this adapter was written: workable.com/terms is the employer-customer
+    agreement and has no clause on visitors or automated access;
+    jobs.workable.com/robots.txt does not disallow /api/. Keep to a daily run.
+    """
+    cap = cfg.get("max", 400)
+    queries = cfg.get("queries") or [""]
+    locations = cfg.get("locations") or [""]
+    out, seen = [], set()
+    for term in queries:
+        for loc in locations:
+            token = None
+            for _ in range(cfg.get("pages", 3)):
+                if len(out) >= cap:
+                    return out[:cap]
+                q = {k: v for k, v in (("query", term), ("location", loc)) if v}
+                if token:
+                    q["pageToken"] = token
+                d = _get_retry("https://jobs.workable.com/api/v1/jobs?"
+                               + urllib.parse.urlencode(q))
+                for j in d.get("jobs", []):
+                    jid = j.get("id")
+                    if not jid or jid in seen:
+                        continue
+                    seen.add(jid)
+                    where = "; ".join(j.get("locations") or []) or ", ".join(
+                        v for v in ((j.get("location") or {}).get(k)
+                                    for k in ("city", "subregion", "countryName")) if v)
+                    if j.get("workplace") == "remote":
+                        where = f"{where} (remote)" if where else "Remote"
+                    text = "\n\n".join(strip_html(j.get(k) or "") for k in
+                                       ("description", "requirementsSection", "benefitsSection"))
+                    out.append({
+                        # Multi-employer feed: the employer comes from the row.
+                        "company": (j.get("company") or {}).get("title") or cfg["company"],
+                        "title": j.get("title", ""),
+                        "location": where,
+                        "url": j.get("url", ""),
+                        "description": text.strip(),
+                        "job_id": f"wk:{jid}",
+                        "posted": (j.get("created") or "")[:10],
+                    })
+                token = d.get("nextPageToken")
+                if not token or not d.get("jobs"):
+                    break
+                time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["workable"] = workable
+
+
+# --- aggregator: Germany's federal job board -------------------------------
+
+_BA = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service"
+# A public client id shared by the Bundesagentur's own web and app frontends,
+# not a personal credential. Documented by the community bundesAPI project
+# (github.com/bundesAPI/jobsuche-api); there is no official API.
+_BA_HEADERS = {"X-API-Key": "jobboerse-jobsuche"}
+
+
+def _ba_place(loc):
+    a = loc.get("adresse") or {}
+    # Regions arrive upper-case with underscores (BAYERN, BADEN_WUERTTEMBERG);
+    # write them the way regions.wanted is written.
+    parts = [a.get("ort"), (a.get("region") or "").replace("_", "-").title(),
+             (a.get("land") or "").title()]
+    return ", ".join(p for p in parts if p)
+
+
+def arbeitsagentur(cfg):
+    """Bundesagentur fuer Arbeit Jobsuche -- every posting registered with
+    Germany's federal employment agency, ~800k, including many syndicated
+    from partner boards. No signup; see _BA_HEADERS.
+
+    The search returns NO description, so rows are hydrated after the
+    prescreen (see _hydrate_arbeitsagentur), like Workday. Multi-employer:
+    mark it `"group": "discovery"`.
+
+    Config:
+      queries     free-text `was` terms -- German titles work best
+                  ("Physiker", "Data Scientist", "Softwareentwickler C++")
+      locations   `wo` places, each a string or {"wo": ..., "umkreis": km};
+                  `umkreis` (default 50) is a radius around the place
+      days        `veroeffentlichtseit`, 0-100 (default 30)
+      size        page size (default 50); `pages` per (query, place)
+      zeitarbeit  include temp-agency postings (default false -- they
+                  duplicate the employers' own ads many times over)
+
+    Verified by probing, not from documentation:
+
+    * Use /pc/v6/jobs. Its rows (`ergebnisliste`) are shaped differently from
+      the /pc/v4 rows the community spec describes: `stellenangebotsTitel`,
+      `firma`, `referenznummer`, and a `stellenlokationen` list of addresses.
+      The v4 detail call (/pc/v4/jobdetails/<base64 refnr>) still works.
+
+    * `umkreis` is not a hard filter: results are distance-ranked, and the
+      facets list postcodes far outside the radius. regions.wanted trims.
+
+    * `page` is 1-based; `maxErgebnisse` is the total for the query.
+    """
+    days = cfg.get("days", 30)
+    size = cfg.get("size", 50)
+    cap = cfg.get("max", 600)
+    out, seen = [], set()
+    for term in cfg.get("queries") or [""]:
+        for place in cfg.get("locations") or [""]:
+            if isinstance(place, str):
+                place = {"wo": place}
+            for page in range(1, cfg.get("pages", 2) + 1):
+                if len(out) >= cap:
+                    return out[:cap]
+                q = {"was": term, "wo": place.get("wo", ""),
+                     "umkreis": place.get("umkreis", 50), "angebotsart": 1,
+                     "veroeffentlichtseit": days, "page": page, "size": size,
+                     "zeitarbeit": str(bool(cfg.get("zeitarbeit", False))).lower()}
+                q = {k: v for k, v in q.items() if v != ""}
+                d = _get_retry(f"{_BA}/pc/v6/jobs?" + urllib.parse.urlencode(q),
+                               headers=_BA_HEADERS)
+                rows = d.get("ergebnisliste") or []
+                for j in rows:
+                    ref = j.get("referenznummer")
+                    if not ref or ref in seen:
+                        continue
+                    seen.add(ref)
+                    out.append({
+                        "company": (j.get("firma") or cfg["company"]).strip(),
+                        "title": j.get("stellenangebotsTitel", ""),
+                        "location": "; ".join(_ba_place(l) for l in j.get("stellenlokationen") or []),
+                        "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref}",
+                        "description": "",   # hydrated after the prescreen
+                        "job_id": f"ba:{ref}",
+                        "posted": ((j.get("veroeffentlichungszeitraum") or {}).get("von")
+                                   or j.get("datumErsteVeroeffentlichung") or ""),
+                    })
+                total = int(d.get("maxErgebnisse") or 0)
+                if len(rows) < size or page * size >= total:
+                    break
+                time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["arbeitsagentur"] = arbeitsagentur
+
+
+# --- first-party: JOIN company pages ---------------------------------------
+
+def join(cfg):
+    """JOIN (join.com) -- a free ATS common with Swiss, German and Austrian
+    start-ups and SMEs. One company page per employer:
+
+        https://join.com/companies/<slug>
+
+    `slug` is the path segment of that URL (e.g. `examplecom` -- often the
+    domain with the dot dropped; take it from the real page, do not guess).
+
+    There is no JSON API to call. The company page is a Next.js page that
+    server-renders its job list into __NEXT_DATA__
+    (props.pageProps.pageData.jobs: `items` plus `pagination` with
+    `pageCount`); `?page=N` selects further pages. Rows carry no description,
+    so each surviving row is hydrated from its own job page
+    (_hydrate_join). robots.txt allows /companies/.
+    """
+    slug = cfg["slug"]
+    base = f"https://join.com/companies/{slug}"
+    out, seen, page = [], set(), 1
+    while page <= cfg.get("pages", 10):
+        data = _next_data(_fetch_html(base + (f"?page={page}" if page > 1 else "")))
+        jobs = ((((data.get("props") or {}).get("pageProps") or {})
+                 .get("pageData") or {}).get("jobs") or {})
+        items = jobs.get("items") or []
+        new = [j for j in items if j.get("id") not in seen]
+        for j in new:
+            seen.add(j.get("id"))
+            city = (j.get("city") or {})
+            where = ", ".join(x for x in (city.get("cityName"), city.get("countryName")) if x)
+            if j.get("workplaceType") == "REMOTE" or j.get("remoteType"):
+                where = f"{where} (remote)" if where else "Remote"
+            out.append({
+                "company": cfg["company"],
+                "title": j.get("title", ""),
+                "location": where,
+                "url": f"{base}/{j.get('idParam')}",
+                "description": "",   # hydrated after the prescreen
+                "job_id": f"jn:{slug}:{j.get('id')}",
+                "posted": (j.get("createdAt") or "")[:10],
+            })
+        count = ((jobs.get("pagination") or {}).get("pageCount")) or 1
+        if not new or page >= count:
+            break
+        page += 1
+        time.sleep(0.5)
+    return out
+
+
+ADAPTERS["join"] = join
+
+
+# --- first-party: SAP SuccessFactors Career Site Builder -------------------
+
+def successfactors(cfg):
+    """SAP SuccessFactors "Career Site Builder" sites -- the careers.<org>
+    pages whose results URL looks like /search/?q=...&startrow=N and whose
+    postings live at /job/<Location-Title>/<id>/.
+
+    Config: `base` (e.g. https://careers.example.org), optional `q` (search
+    text), `location_suffix` (appended to each row's location -- rows often
+    give only a bare city name, which a region list may not match on its
+    own), `max`.
+
+    Read from the HTML search pages, 25 rows each, paged with `startrow`
+    until the "Results 1 – 25 of N" total. The RSS feed these sites offer
+    sits under /services/, which their robots.txt typically disallows --
+    /search/ and /job/ are allowed, so use those. Descriptions are hydrated
+    from the job page (_hydrate_successfactors).
+    """
+    base = cfg["base"].rstrip("/")
+    host = urllib.parse.urlparse(base).netloc
+    cap, suffix = cfg.get("max", 600), cfg.get("location_suffix")
+    out, seen, start, total = [], set(), 0, None
+    while len(out) < cap:
+        q = urllib.parse.urlencode({"q": cfg.get("q", ""), "sortColumn": "referencedate",
+                                    "sortDirection": "desc", "startrow": start})
+        html = _fetch_html(f"{base}/search/?{q}")
+        if total is None:
+            m = re.search(r'paginationLabel"[^>]*>.*?<b>\s*(\d+)\s*</b>\s*</span>', html, re.S)
+            nums = re.findall(r"<b>(\d+)</b>", m.group(0)) if m else []
+            total = int(nums[-1]) if nums else 0
+        rows = html.split('class="data-row')[1:]
+        for row in rows:
+            m = re.search(r'href="(/job/[^"]+/(\d+)/)"[^>]*>([^<]+)</a>', row)
+            if not m or m.group(2) in seen:
+                continue
+            seen.add(m.group(2))
+            loc = re.search(r'class="jobShifttype[^"]*"[^>]*>\s*([^<]*)<', row)
+            loc = _html.unescape(loc.group(1).strip()) if loc else ""
+            if suffix and loc and suffix.lower() not in loc.lower():
+                loc = f"{loc}, {suffix}"
+            date = re.search(r'class="jobDate[^"]*"[^>]*>\s*([^<]+)<', row)
+            out.append({
+                "company": cfg["company"],
+                "title": _html.unescape(m.group(3).strip()),
+                "location": loc,
+                "url": base + m.group(1),
+                "description": "",   # hydrated after the prescreen
+                "job_id": f"sf:{host}:{m.group(2)}",
+                "posted": date.group(1).strip() if date else "",
+            })
+        start += 25
+        if not rows or start >= total:
+            break
+        time.sleep(0.5)
+    return out[:cap]
+
+
+ADAPTERS["successfactors"] = successfactors
+
+
+# --- first-party: ETH Zurich job portal ------------------------------------
+
+def ethz(cfg):
+    """jobs.ethz.ch -- ETH Zurich's own job portal (a server-rendered Yii
+    app, not a shared ATS). The front page lists every open position at
+    once, one `job-ad__item` per role:
+
+        <h3 class="job-ad__item__title">            title
+        <div class="job-ad__item__details">         "100%, Zürich, unbefristet"
+        <div class="job-ad__item__company">         "24.11.2026 | <department>"
+
+    Postings link to /job/view/<id>, whose full text sits in the
+    `description` element (_hydrate_ethz). robots.txt allows everything.
+    The Refline search pages linked from the portal belong to other
+    ETH-domain institutes, not to ETH Zurich itself.
+
+    The details line mixes workload, place and contract type; it is kept
+    whole as the location. There is deliberately no default country suffix:
+    the portal also lists ETH's sites abroad (Singapore), and appending
+    "Switzerland" to every row would carry those past a region filter.
+    Set `location_suffix` only if your region list needs it.
+    """
+    base = cfg.get("base", "https://jobs.ethz.ch").rstrip("/")
+    suffix = cfg.get("location_suffix")
+    html = _fetch_html(f"{base}/?lang={cfg.get('lang', 'en')}")
+    out, seen = [], set()
+    for row in html.split('class="job-ad__item__wrapper"')[1:]:
+        m = re.search(r'href="(/job/view/[^"]+)"', row)
+        if not m or m.group(1) in seen:
+            continue
+        seen.add(m.group(1))
+
+        def part(cls):
+            p = re.search(rf'class="job-ad__item__{cls}"[^>]*>(.*?)</', row, re.S)
+            return _html.unescape(re.sub(r"\s+", " ", p.group(1)).strip()) if p else ""
+
+        details, company = part("details"), part("company")
+        date, _, dept = company.partition("|")
+        d = re.match(r"\s*(\d{2})\.(\d{2})\.(\d{4})", date)
+        out.append({
+            "company": cfg.get("company", "ETH Zurich"),
+            "title": part("title") + (f" ({dept.strip()})" if cfg.get("department_in_title") and dept.strip() else ""),
+            "location": f"{details}, {suffix}" if details and suffix else details,
+            "url": base + m.group(1),
+            "description": "",   # hydrated after the prescreen
+            "job_id": "ez:" + m.group(1).rsplit("/", 1)[-1],
+            "posted": f"{d.group(3)}-{d.group(2)}-{d.group(1)}" if d else "",
+        })
+    return out
+
+
+ADAPTERS["ethz"] = ethz
+
+
+# --- first-party: Refline (Swiss ATS) ---------------------------------------
+
+def refline(cfg):
+    """Refline -- a Swiss ATS used by many Swiss employers and public
+    institutions. Each employer has a numeric account on apply.refline.ch:
+
+        https://apply.refline.ch/<account>/search.html
+
+    Find `account` in the employer's careers-page links; do not guess it.
+
+    `?all=1` lists every open position on one page, as a table whose cells
+    carry fixed classes: position (link + title), workload, workplace,
+    published (dd.mm.yyyy). Postings live at
+    /<account>/<job>/pub/<n>/index.html, and each embeds a JSON-LD
+    JobPosting with the full description (_hydrate_refline) -- more robust
+    than the employer-specific page templates around it. robots.txt allows
+    the /<account>/ paths.
+
+    `workplace` is usually a bare town ("Dübendorf"), and some accounts'
+    tables omit the column entirely. Set `location_suffix` (e.g. the
+    country) if your region list does not name every town; it is appended
+    to a town, or used on its own when the workplace is missing.
+    """
+    acct = str(cfg["account"])
+    base = f"https://apply.refline.ch/{acct}"
+    suffix = cfg.get("location_suffix")
+    html = _fetch_html(f"{base}/search.html?all=1&lang={cfg.get('lang', 'en')}")
+    out, seen = [], set()
+    for row in re.findall(r"<tr>(.*?)</tr>", html, re.S):
+        m = re.search(r'class="position"[^>]*>\s*<a href="([^"]+)"[^>]*>(.*?)</a>', row, re.S)
+        if not m or m.group(1) in seen:
+            continue
+        seen.add(m.group(1))
+
+        def cell(cls):
+            c = re.search(rf'class="{cls}"[^>]*>(.*?)</td>', row, re.S)
+            return _html.unescape(re.sub(r"<[^>]+>|\s+", " ", c.group(1)).strip()) if c else ""
+
+        # Some accounts' tables have no workplace column at all; the suffix
+        # then stands in as the whole location rather than leaving it empty.
+        where = cell("workplace")
+        if suffix and suffix.lower() not in where.lower():
+            where = f"{where}, {suffix}" if where else suffix
+        d = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", cell("published"))
+        jid = re.search(rf"/{acct}/(\d+)/", m.group(1))
+        out.append({
+            "company": cfg["company"],
+            "title": _html.unescape(re.sub(r"\s+", " ", m.group(2)).strip()),
+            "location": where,
+            "url": m.group(1),
+            "description": "",   # hydrated after the prescreen
+            "job_id": f"rf:{acct}:{jid.group(1) if jid else m.group(1)}",
+            "posted": f"{d.group(3)}-{d.group(2)}-{d.group(1)}" if d else "",
+        })
+    return out
+
+
+ADAPTERS["refline"] = refline

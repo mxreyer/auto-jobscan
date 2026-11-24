@@ -128,6 +128,51 @@
       "company": "Display Name",
       "site_id": "UUID-from-the-careers-page-script-tag",
       "_warning": "Get site_id from the careers page: <script src=https://careers-content.clearcompany.com/js/v1/career-site.js?siteId=UUID>. That tag's src may be UNQUOTED, so grep the raw HTML for `clearcompany` rather than matching src=\"...\". Locations come back as 'City ST' with no comma -- make sure regions.wanted has a bare ' st' form or every role is silently dropped."
+    },
+    "join": {
+      "kind": "join",
+      "company": "Display Name",
+      "slug": "path-segment-from-join.com/companies/<slug>"
+    },
+    "refline": {
+      "kind": "refline",
+      "company": "Display Name",
+      "account": "numeric id from apply.refline.ch/<account>/search.html",
+      "location_suffix": "Country -- optional; workplaces are bare town names, sometimes absent",
+      "_warning": "Refline (Swiss ATS). ?all=1 lists every role on one page; descriptions come from each job page's JSON-LD JobPosting. Take the account number from the employer's careers-page links -- do not guess it."
+    },
+    "ethz": {
+      "kind": "ethz",
+      "company": "ETH Zurich",
+      "_warning": "ETH Zurich's own portal: every open role on one server-rendered page, descriptions hydrated per surviving row. The location is the row's details line ('100%, Zurich, fixed-term'); ETH's sites abroad (Singapore) are listed too, so no country suffix is added by default."
+    },
+    "successfactors": {
+      "kind": "successfactors",
+      "company": "Display Name",
+      "base": "https://careers.example.org",
+      "location_suffix": "Country -- optional; rows often name only a city",
+      "_warning": "SAP SuccessFactors Career Site Builder. Read from the /search/ pages (25 rows each) and hydrated from /job/ pages; the RSS feed under /services/ is usually disallowed by robots.txt. Rows carry no posting date."
+    },
+    "workable": {
+      "kind": "workable",
+      "group": "discovery",
+      "company": "(workable)",
+      "queries": ["a specific role phrase", "another phrase"],
+      "locations": ["a country or city, e.g. Switzerland"],
+      "pages": 2,
+      "max": 600,
+      "_warning": "A multi-employer search across every Workable employer -- strongest in Europe. Cost is one request per 20 rows: queries x locations x pages. `location` is a fuzzy match, not a filter (a country returns rows from all over it), so regions.wanted does the real filtering."
+    },
+    "arbeitsagentur": {
+      "kind": "arbeitsagentur",
+      "group": "discovery",
+      "company": "(arbeitsagentur)",
+      "queries": ["a German job title works best, e.g. Physiker", "another title"],
+      "locations": [{"wo": "a German city", "umkreis": 50}],
+      "days": 30,
+      "pages": 2,
+      "max": 600,
+      "_warning": "Germany's federal job board. Rows come without a description and are hydrated after the prescreen, one request each. `umkreis` is a radius in km and is not a hard filter -- regions.wanted trims. Discovery rows must also match discovery_signal, so add German title words (e.g. 'physiker') there or German postings never pass."
     }
   },
   "prescreen": {

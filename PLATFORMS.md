@@ -60,9 +60,13 @@ First-party boards — the company's own ATS, always full descriptions:
 | an Eightfold site | `eightfold` | `base: https://careers.X.com, domain: X.com` |
 | a Paradox.ai careersite | `paradox` | `base: https://employment.X.edu` |
 | a `careers-api.clearcompany.com` board | `clearcompany` | `site_id: <UUID>` |
+| `join.com/companies/X` | `join` | `slug: X` |
+| `jobs.ethz.ch` (ETH Zurich's own portal) | `ethz` | none required |
+| `apply.refline.ch/N/search.html` | `refline` | `account: N`, optional `location_suffix` |
+| a SuccessFactors Career Site Builder site (`/search/?q=…&startrow=N`, postings at `/job/<Loc-Title>/<id>/`) | `successfactors` | `base: https://careers.X.org`, optional `location_suffix` |
 
-(That table is first-party boards. The two aggregator kinds — `themuse` and
-`himalayas` — are below.)
+(That table is first-party boards. The aggregator kinds — `themuse`,
+`himalayas`, `workable` and `arbeitsagentur` — are below.)
 
 Aggregators — for employers whose own portal resists scripting, and for
 reaching employers you would never have thought to track:
@@ -71,8 +75,10 @@ reaching employers you would never have thought to track:
 |---|---|---|---|---|
 | `themuse` | **full** (~4k chars) | `scored` | metro + remote, all employers | no key required |
 | `himalayas` | **full** (~4.9k chars) | `scored` | **remote-only**, ~104k roles | no key required |
+| `workable` | **full** (~3k chars) | `scored` | every Workable employer; strongest in **Europe** | no key required; see the adapter docstring |
+| `arbeitsagentur` | **full** after hydration (~2–4k chars) | `scored` | **Germany**, ~800k roles, radius search | public client id, no signup; see the adapter docstring |
 
-The two do not overlap the way you would expect. The Muse indexes employers
+The first two do not overlap the way you would expect. The Muse indexes employers
 against offices; Himalayas is remote-only, so it reaches remote-first companies
 that have no office to be indexed against and therefore never appear on a metro
 aggregator at all. Running both is not redundancy.
@@ -84,7 +90,7 @@ the company has none.
 
 Unsure which platform? Fingerprint the careers page:
 
-    curl -sL <careers-url> | grep -ioE 'myworkdayjobs|greenhouse|lever|ashby|icims|eightfold|avature|talentbrew|pageuppeople|brassring|paradox|smartrecruiters|successfactors|phenom|clearcompany|jobvite|workable|breezy|bamboohr|recruitee|teamtailor|jazzhr|dayforce|ultipro|taleo|applytojob'
+    curl -sL <careers-url> | grep -ioE 'myworkdayjobs|greenhouse|lever|ashby|icims|eightfold|avature|talentbrew|pageuppeople|brassring|paradox|smartrecruiters|successfactors|phenom|clearcompany|jobvite|workable|breezy|bamboohr|recruitee|teamtailor|jazzhr|dayforce|ultipro|taleo|applytojob|join\.com|sapsf|careersitebuilder|refline'
 
 Then `python3 jobscan.py --check` to confirm it answers.
 
