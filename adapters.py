@@ -110,6 +110,7 @@ ATTRIBUTION = {
     "clearcompany":    ("ClearCompany", "https://www.clearcompany.com"),
     "join":            ("JOIN", "https://join.com"),
     "successfactors":  ("SAP SuccessFactors", "https://www.sap.com/products/hcm.html"),
+    "ethz":            ("ETH Zurich job portal", "https://jobs.ethz.ch"),
     # Aggregators, which index many employers.
     "themuse":         ("The Muse", "https://www.themuse.com"),
     "himalayas":       ("Himalayas", "https://himalayas.app"),
@@ -732,11 +733,16 @@ def _hydrate_successfactors(job):
     return strip_html(_element_inner(_fetch_html(job["url"]), 'class="jobdescription"', "span"))
 
 
+def _hydrate_ethz(job):
+    """jobs.ethz.ch detail pages keep the posting in <div class="description">."""
+    return strip_html(_element_inner(_fetch_html(job["url"]), 'class="description"', "div"))
+
+
 _HYDRATORS = {"wd": _hydrate_workday, "sr": _hydrate_smartrecruiters,
               "rd": _hydrate_radancy, "ef": _hydrate_eightfold,
               "px": _hydrate_paradox, "pu": _hydrate_pageup,
               "ba": _hydrate_arbeitsagentur, "jn": _hydrate_join,
-              "sf": _hydrate_successfactors}
+              "sf": _hydrate_successfactors, "ez": _hydrate_ethz}
 
 
 def hydrate(job):
@@ -1368,3 +1374,57 @@ def successfactors(cfg):
 
 
 ADAPTERS["successfactors"] = successfactors
+
+
+# --- first-party: ETH Zurich job portal ------------------------------------
+
+def ethz(cfg):
+    """jobs.ethz.ch -- ETH Zurich's own job portal (a server-rendered Yii
+    app, not a shared ATS). The front page lists every open position at
+    once, one `job-ad__item` per role:
+
+        <h3 class="job-ad__item__title">            title
+        <div class="job-ad__item__details">         "100%, Zürich, unbefristet"
+        <div class="job-ad__item__company">         "24.11.2026 | <department>"
+
+    Postings link to /job/view/<id>, whose full text sits in the
+    `description` element (_hydrate_ethz). robots.txt allows everything.
+    The Refline search pages linked from the portal belong to other
+    ETH-domain institutes, not to ETH Zurich itself.
+
+    The details line mixes workload, place and contract type; it is kept
+    whole as the location. There is deliberately no default country suffix:
+    the portal also lists ETH's sites abroad (Singapore), and appending
+    "Switzerland" to every row would carry those past a region filter.
+    Set `location_suffix` only if your region list needs it.
+    """
+    base = cfg.get("base", "https://jobs.ethz.ch").rstrip("/")
+    suffix = cfg.get("location_suffix")
+    html = _fetch_html(f"{base}/?lang={cfg.get('lang', 'en')}")
+    out, seen = [], set()
+    for row in html.split('class="job-ad__item__wrapper"')[1:]:
+        m = re.search(r'href="(/job/view/[^"]+)"', row)
+        if not m or m.group(1) in seen:
+            continue
+        seen.add(m.group(1))
+
+        def part(cls):
+            p = re.search(rf'class="job-ad__item__{cls}"[^>]*>(.*?)</', row, re.S)
+            return _html.unescape(re.sub(r"\s+", " ", p.group(1)).strip()) if p else ""
+
+        details, company = part("details"), part("company")
+        date, _, dept = company.partition("|")
+        d = re.match(r"\s*(\d{2})\.(\d{2})\.(\d{4})", date)
+        out.append({
+            "company": cfg.get("company", "ETH Zurich"),
+            "title": part("title") + (f" ({dept.strip()})" if cfg.get("department_in_title") and dept.strip() else ""),
+            "location": f"{details}, {suffix}" if details and suffix else details,
+            "url": base + m.group(1),
+            "description": "",   # hydrated after the prescreen
+            "job_id": "ez:" + m.group(1).rsplit("/", 1)[-1],
+            "posted": f"{d.group(3)}-{d.group(2)}-{d.group(1)}" if d else "",
+        })
+    return out
+
+
+ADAPTERS["ethz"] = ethz

@@ -134,6 +134,11 @@
       "company": "Display Name",
       "slug": "path-segment-from-join.com/companies/<slug>"
     },
+    "ethz": {
+      "kind": "ethz",
+      "company": "ETH Zurich",
+      "_warning": "ETH Zurich's own portal: every open role on one server-rendered page, descriptions hydrated per surviving row. The location is the row's details line ('100%, Zurich, fixed-term'); ETH's sites abroad (Singapore) are listed too, so no country suffix is added by default."
+    },
     "successfactors": {
       "kind": "successfactors",
       "company": "Display Name",

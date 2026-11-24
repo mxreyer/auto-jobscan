@@ -61,6 +61,7 @@ First-party boards — the company's own ATS, always full descriptions:
 | a Paradox.ai careersite | `paradox` | `base: https://employment.X.edu` |
 | a `careers-api.clearcompany.com` board | `clearcompany` | `site_id: <UUID>` |
 | `join.com/companies/X` | `join` | `slug: X` |
+| `jobs.ethz.ch` (ETH Zurich's own portal) | `ethz` | none required |
 | a SuccessFactors Career Site Builder site (`/search/?q=…&startrow=N`, postings at `/job/<Loc-Title>/<id>/`) | `successfactors` | `base: https://careers.X.org`, optional `location_suffix` |
 
 (That table is first-party boards. The aggregator kinds — `themuse`,
